@@ -1,37 +1,26 @@
-# Project Context: Last-Mile Delivery Tracker
+# Project Context: Campus Provision Tracker
 
 ## Product
-A web and mobile system for tracking packages from the local delivery hub to the customer’s address.
+A tool to optimize nutritional value and dining dollar usage of cal poly student food intake using an algorithm
 
 ## Users
-- Managers: monitor operations, delivery performance, and exceptions.
-- Drivers: view assigned stops and update delivery status.
-- Customer service: investigate delayed or failed deliveries.
-- Customers: view package status and estimated arrival time.
+- Students: view dining dollar usage, and get optimized food recomendations.
 
 ## Evidence
-- Drivers need a quick way to record a delivery attempt.
-- Customers want to know whether their package will arrive today.
-- Customer service needs a clear history of delivery events.
-- Managers need to identify routes with repeated delays.
+- Students need a better way of optimizing their dining dollar usage
+- Student wants good food recomendations based on their nutritional needs.
 
 ## Confirmed decisions
-- Drivers can update status from a mobile device.
-- Customers can view status without seeing other customers’ information.
-- Each status update records a time and location.
-- Customer service can view the delivery-event history.
+- Students can view their current dining dollars amount.
+- Students can edit filters for their specific nutritional needs
 
 ## Constraints
-- Do not include real customer addresses, names, or package IDs in GenAI prompts.
-- Status changes must preserve an audit history.
-- The system must support poor cellular connectivity for drivers.
-- Managers approve operational policies; the team does not invent them.
+- Do not include real student customer addresses, names, or package IDs in GenAI prompts.
+- The system must support poor cellular connectivity for users.
 
 ## Open questions
-- Which delivery statuses are allowed?
-- How long should a driver be able to work offline?
-- When should the system notify a customer about a delay?
-- What information may managers see about driver performance?
+- How should amount of meals per day for the student be calculated?
+- What types of nutritional filters be part of the app
 
 ## Task prompt pattern
 Using only the evidence and confirmed decisions above:
