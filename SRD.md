@@ -32,12 +32,13 @@ _<u>REPOSITORY.)</u>_
 
 |LAST DATE CHANGED:<br>WHO:<br>WHAT WAS CHANGED:|
 |---|
+|**2026-09-23**<br>**Alan Mathew, Aarav Babel, Max Plankar**<br>Replaced placeholder workout stories with coordinated Campus Provision Tracker user stories. Added first-author attribution, acceptance criteria, assumptions, and stakeholder questions.|
 
 
 
 # **CAMPUS PROVISION TRACKER SOFTWARE REQUIREMENTS SPECIFICATION (SRS)** 
 
-**COURSE: CSC 3100 DATE: [SUBMISSION DATE]** 
+**COURSE: CSC 3100 DATE: 2026-09-23**
 
 |**TABL**|**E OF**|**CONTENTS**|
 |---|---|---|
@@ -45,7 +46,7 @@ _<u>REPOSITORY.)</u>_
 ||**`O`**|**1.1 PROJECT PURPOSE**|
 ||**`O`**|**1.2 INTENDED AUDIENCE**|
 ||**`O`**|**1.3 PROJECT SCOPE**|
-|**2. **|**USER**|**STOREIES ..................................................................................... [PAGE #]**|
+|**2. **|**USER**|**STORIES ....................................................................................... [PAGE #]**|
 ||**`O`**|**2.1 USER FEATURES (THE"SHALL" STATEMENTS)**|
 ||**`O`**|**2.2 ADMIN FEATURES**|
 |**3. **|**FUNC**|**TIONAL REQUIREMENTS....................................................... [PAGE #]**|
@@ -78,41 +79,54 @@ _<u>REPOSITORY.)</u>_
 
 # **_<u>SO THAT [VALUE/BENEFIT]."</u>_** 
 
-- **<u>US-01:</u>** <u>AUTHENTICATION</u> 
+These stories describe the connected student experience: a student can review their available dining dollars, provide nutritional preferences, and use those inputs to receive food recommendations.
 
-- **<u>US-02:</u>** <u>STORE WORKOUT_LOG.</u> 
+|ID|USER STORY|FIRST AUTHOR|PRIORITY|
+|---|---|---|---|
+|US-01|As a Cal Poly student with a dining plan, I want to view my current dining dollar balance so that I know how much I can spend on food.|Alan Mathew|1|
+|US-02|As a student with specific nutritional needs, I want to edit nutritional filters so that recommendations reflect my preferences.|Aarav Babel|2|
+|US-03|As a student who wants to make informed meal choices, I want to receive food recommendations based on my nutritional filters and dining dollar balance so that I can improve my nutrition while using my dining dollars effectively.|Max Plankar|3|
 
-- **<u>US-03:</u>** <u>SEARCH HISTORY</u> 
+## **2.1 ACCEPTANCE CRITERIA**
+
+### **US-01: View current dining dollar balance**
+
+- **Given** a student has access to the Campus Provision Tracker, **when** the student opens their dining balance, **then** the system displays the student's current dining dollar amount.
+- **Given** the dining dollar amount is unavailable, **when** the student requests the balance, **then** the system clearly indicates that the balance could not be retrieved instead of displaying an invented amount.
+
+### **US-02: Edit nutritional filters**
+
+- **Given** a student is viewing their nutritional preferences, **when** the student changes a filter, **then** the system saves and displays the updated filter value.
+- **Given** a student has saved nutritional filters, **when** recommendations are requested, **then** the system uses those filters as recommendation inputs.
+
+### **US-03: Receive food recommendations**
+
+- **Given** a student has a dining dollar balance and nutritional filters, **when** the student requests recommendations, **then** the system presents food recommendations that use both inputs.
+- **Given** the student changes a nutritional filter or dining dollar balance, **when** recommendations are requested again, **then** the system reflects the updated input values.
+
+## **2.2 ASSUMPTIONS**
+
+- Students using the tool have a Cal Poly dining plan and a current dining dollar balance available to the system.
+- Nutritional filters are selected by the student and may be changed as their needs change.
+- Recommendations are informational and support meal planning; they do not replace professional nutritional advice.
+
+## **2.3 STAKEHOLDER QUESTIONS**
+
+- What types of nutritional filters should the first version support?
+- How should the system calculate the number of meals per day for a student?
+- Which dining locations and menu items should be included in recommendations?
+
+
+
+# **3.** **<u>FUNCTIONAL REQUIREMENTS</u>**
+
+_THE SYSTEM SHALL..._
 
 |ID|REQUIREMENT|PRIORITY|
 |---|---|---|
-|US-01|As a user, I want to<br>authenticate via<br>username and<br>password.|2|
-|US-02|As a user, I want to<br>store workout<br>information|1|
-|US-03|As a user, I want to<br>search workout history|3|
-|US-04|As a user, I want to add<br>new workout types.|4|
-
-
-
-# **3.** **<u>FUNCTIONAL REQUIREMENTS</u>** 
-
-_THE SYSTEM SHALL..._ 
-
-|ID|REQUIREMENT|PRIORITY|
-|---|---|---|
-|FR-01|The system will|2|
-||authenticate users via||
-||username and||
-||password.||
-|FR-02|Allow users to store|1|
-
-
-
-||workout information||
-|---|---|---|
-|US-03|Allow users to search|3|
-||their workout history||
-|US-04|Allow users to add new|4|
-||workout types.||
+|FR-01|The system shall display the student's current dining dollar balance.|1|
+|FR-02|The system shall allow the student to create and edit nutritional filters.|2|
+|FR-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|3|
 
 
 
@@ -146,18 +160,9 @@ _THE SYSTEM SHALL..._
 
 |ID|REQUIREMENT|LINE OF CODE|
 |---|---|---|
-|US-01|The system will|152|
-||authenticate users via<br>username and<br>password.||
-|US-02|Allow users to store|256|
-||workout information||
-|US-03|Allow users to search|46|
-
-
-
-||their workout history||
-|---|---|---|
-|US-04|Allow users to add new|45|
-||workout types.||
+|US-01|The system shall display the student's current dining dollar balance.|TBD|
+|US-02|The system shall allow the student to create and edit nutritional filters.|TBD|
+|US-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|TBD|
 
 
 
@@ -166,4 +171,3 @@ _THE SYSTEM SHALL..._
 - **<u>MODEL(S) USED:</u>** <u>[E.G., CLAUDE 3.5, GPT-4O]</u> 
 
 - **<u>PROMPTS USED DURING CODING:</u>** 
-
