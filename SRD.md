@@ -34,6 +34,7 @@ _<u>REPOSITORY.)</u>_
 |---|
 |**2026-09-23**<br>**Alan Mathew, Aarav Babel, Max Plankar**<br>Replaced placeholder workout stories with coordinated Campus Provision Tracker user stories. Added first-author attribution, acceptance criteria, assumptions, and stakeholder questions.|
 |**2026-09-25**<br>**Max Plankar**<br>Added two more user stories regarding recommendation nutrition and cost details and dining-location filtering. Updated the related acceptance criteria, functional requirements, and traceability entries.|
+|**2026-09-25**<br>**Aarav Babel**<br>Added US-06 and US-07 covering daily dining-dollar budgeting and meal-to-target nutrition comparison. Updated the related acceptance criteria, functional requirements, and traceability entries.|
 
 
 
@@ -89,6 +90,8 @@ These stories describe the connected student experience: a student can review th
 |US-03|As a student who wants to make informed meal choices, I want to receive food recommendations based on my nutritional filters and dining dollar balance so that I can improve my nutrition while using my dining dollars effectively.|Max Plankar|3|
 |US-04|As a student comparing dining options, I want to view the nutrition and dining dollar cost of each recommended item so that I can choose a meal that fits my needs and budget.|Max Plankar|4|
 |US-05|As a student choosing where to eat, I want to filter recommendations by dining location so that I can find suitable options at a convenient campus location.|Max Plankar|5|
+|US-06|As a student managing a limited dining budget, I want to set a target amount of dining dollars to spend per day so that I can pace my spending throughout the quarter.|Aarav Babel|6|
+|US-07|As a student trying to meet my nutrition goals, I want to see how closely a recommended meal matches my calorie and macronutrient targets so that I can compare recommendations more effectively.|Aarav Babel|7|
 
 ## **2.1 ACCEPTANCE CRITERIA**
 
@@ -117,6 +120,16 @@ These stories describe the connected student experience: a student can review th
 - **Given** recommendations are available for multiple dining locations, **when** the student selects a dining location, **then** the system displays recommendations available at that location.
 - **Given** the student clears the dining location filter, **when** recommendations are displayed, **then** the system shows recommendations from all available dining locations.
 
+### **US-06: Set a daily dining dollar target**
+
+- **Given** a student is managing their dining budget, **when** the student enters a daily dining dollar target, **then** the system saves and displays that target for use in future recommendations.
+- **Given** a student has an active daily dining dollar target, **when** recommendations are generated, **then** the system uses that target to help pace the student's spending throughout the quarter.
+
+### **US-07: Compare meal alignment to nutrition targets**
+
+- **Given** a student has calorie and macronutrient targets, **when** the student views a recommended meal, **then** the system indicates how closely the meal matches those targets.
+- **Given** multiple recommended meals are available, **when** the student compares them, **then** the system helps highlight which recommendation is closest to the student's nutrition goals.
+
 ## **2.2 ASSUMPTIONS**
 
 - Students using the tool have a Cal Poly dining plan and a current dining dollar balance available to the system.
@@ -142,6 +155,8 @@ _THE SYSTEM SHALL..._
 |FR-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|3|
 |FR-04|The system shall display available nutritional information and dining dollar cost for each recommended item.|4|
 |FR-05|The system shall allow the student to filter recommendations by dining location.|5|
+|FR-06|The system shall allow the student to set a daily dining dollar target for pacing spending throughout the quarter.|6|
+|FR-07|The system shall indicate how closely each recommended meal matches the student's calorie and macronutrient targets.|7|
 
 
 
@@ -180,6 +195,8 @@ _THE SYSTEM SHALL..._
 |US-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|TBD|
 |US-04|The system shall display available nutritional information and dining dollar cost for each recommended item.|TBD|
 |US-05|The system shall allow the student to filter recommendations by dining location.|TBD|
+|US-06|The system shall allow the student to set a daily dining dollar target to pace spending throughout the quarter.|TBD|
+|US-07|The system shall show how closely each recommended meal matches the student's calorie and macronutrient targets.|TBD|
 
 
 
