@@ -33,6 +33,7 @@ _<u>REPOSITORY.)</u>_
 |LAST DATE CHANGED:<br>WHO:<br>WHAT WAS CHANGED:|
 |---|
 |**2026-09-23**<br>**Alan Mathew, Aarav Babel, Max Plankar**<br>Replaced placeholder workout stories with coordinated Campus Provision Tracker user stories. Added first-author attribution, acceptance criteria, assumptions, and stakeholder questions.|
+|**2026-09-25**<br>**Max Plankar**<br>Added two more user stories regarding recommendation nutrition and cost details and dining-location filtering. Updated the related acceptance criteria, functional requirements, and traceability entries.|
 
 
 
@@ -86,6 +87,8 @@ These stories describe the connected student experience: a student can review th
 |US-01|As a Cal Poly student with a dining plan, I want to view my current dining dollar balance so that I know how much I can spend on food.|Alan Mathew|1|
 |US-02|As a student with specific nutritional needs, I want to edit nutritional filters so that recommendations reflect my preferences.|Aarav Babel|2|
 |US-03|As a student who wants to make informed meal choices, I want to receive food recommendations based on my nutritional filters and dining dollar balance so that I can improve my nutrition while using my dining dollars effectively.|Max Plankar|3|
+|US-04|As a student comparing dining options, I want to view the nutrition and dining dollar cost of each recommended item so that I can choose a meal that fits my needs and budget.|Max Plankar|4|
+|US-05|As a student choosing where to eat, I want to filter recommendations by dining location so that I can find suitable options at a convenient campus location.|Max Plankar|5|
 
 ## **2.1 ACCEPTANCE CRITERIA**
 
@@ -103,6 +106,16 @@ These stories describe the connected student experience: a student can review th
 
 - **Given** a student has a dining dollar balance and nutritional filters, **when** the student requests recommendations, **then** the system presents food recommendations that use both inputs.
 - **Given** the student changes a nutritional filter or dining dollar balance, **when** recommendations are requested again, **then** the system reflects the updated input values.
+
+### **US-04: View recommendation nutrition and cost**
+
+- **Given** a student receives a food recommendation, **when** the student views the recommendation details, **then** the system displays the item's available nutritional information and dining dollar cost.
+- **Given** nutrition or cost information is unavailable for a recommended item, **when** the student views its details, **then** the system clearly identifies the unavailable information instead of displaying an invented value.
+
+### **US-05: Filter recommendations by dining location**
+
+- **Given** recommendations are available for multiple dining locations, **when** the student selects a dining location, **then** the system displays recommendations available at that location.
+- **Given** the student clears the dining location filter, **when** recommendations are displayed, **then** the system shows recommendations from all available dining locations.
 
 ## **2.2 ASSUMPTIONS**
 
@@ -127,6 +140,8 @@ _THE SYSTEM SHALL..._
 |FR-01|The system shall display the student's current dining dollar balance.|1|
 |FR-02|The system shall allow the student to create and edit nutritional filters.|2|
 |FR-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|3|
+|FR-04|The system shall display available nutritional information and dining dollar cost for each recommended item.|4|
+|FR-05|The system shall allow the student to filter recommendations by dining location.|5|
 
 
 
@@ -163,6 +178,8 @@ _THE SYSTEM SHALL..._
 |US-01|The system shall display the student's current dining dollar balance.|TBD|
 |US-02|The system shall allow the student to create and edit nutritional filters.|TBD|
 |US-03|The system shall generate food recommendations using the student's nutritional filters and dining dollar balance.|TBD|
+|US-04|The system shall display available nutritional information and dining dollar cost for each recommended item.|TBD|
+|US-05|The system shall allow the student to filter recommendations by dining location.|TBD|
 
 
 
