@@ -35,6 +35,7 @@ _<u>REPOSITORY.)</u>_
 |**2026-09-23**<br>**Alan Mathew, Aarav Babel, Max Plankar**<br>Replaced placeholder workout stories with coordinated Campus Provision Tracker user stories. Added first-author attribution, acceptance criteria, assumptions, and stakeholder questions.|
 |**2026-09-25**<br>**Max Plankar**<br>Added two more user stories regarding recommendation nutrition and cost details and dining-location filtering. Updated the related acceptance criteria, functional requirements, and traceability entries.|
 |**2026-09-25**<br>**Aarav Babel**<br>Added US-06 and US-07 covering daily dining-dollar budgeting and meal-to-target nutrition comparison. Updated the related acceptance criteria, functional requirements, and traceability entries.|
+|**2026-09-25**<br>**Alan Mathew**<br>Added US-08 and US-09 covering allergen and ingredient exclusions and saving favorite meals. Updated the related acceptance criteria, functional requirements, and traceability entries.|
 
 
 
@@ -92,6 +93,8 @@ These stories describe the connected student experience: a student can review th
 |US-05|As a student choosing where to eat, I want to filter recommendations by dining location so that I can find suitable options at a convenient campus location.|Max Plankar|5|
 |US-06|As a student managing a limited dining budget, I want to set a target amount of dining dollars to spend per day so that I can pace my spending throughout the quarter.|Aarav Babel|6|
 |US-07|As a student trying to meet my nutrition goals, I want to see how closely a recommended meal matches my calorie and macronutrient targets so that I can compare recommendations more effectively.|Aarav Babel|7|
+|US-08|As a student with dietary restrictions, I want to exclude foods containing allergens or ingredients I avoid so that recommendations are safe to eat.|Alan Mathew|8|
+|US-09|As a student, I want to save favorite meals so that I can quickly find dining options I enjoyed before.|Alan Mathew|9|
 
 ## **2.1 ACCEPTANCE CRITERIA**
 
@@ -130,6 +133,16 @@ These stories describe the connected student experience: a student can review th
 - **Given** a student has calorie and macronutrient targets, **when** the student views a recommended meal, **then** the system indicates how closely the meal matches those targets.
 - **Given** multiple recommended meals are available, **when** the student compares them, **then** the system helps highlight which recommendation is closest to the student's nutrition goals.
 
+### **US-08: Exclude allergens and avoided ingredients**
+
+- **Given** a student has specified allergens or ingredients to avoid, **when** recommendations are generated, **then** the system excludes meals containing those allergens or ingredients.
+- **Given** ingredient information is unavailable for a potential recommendation, **when** dietary restrictions are active, **then** the system clearly identifies the missing information instead of presenting the meal as safe to eat.
+
+### **US-09: Save favorite meals**
+
+- **Given** a student is viewing a meal, **when** the student saves it as a favorite, **then** the system adds the meal to the student's saved favorites.
+- **Given** a student has saved favorite meals, **when** the student opens their favorites, **then** the system displays those meals so the student can quickly find them again.
+
 ## **2.2 ASSUMPTIONS**
 
 - Students using the tool have a Cal Poly dining plan and a current dining dollar balance available to the system.
@@ -157,6 +170,8 @@ _THE SYSTEM SHALL..._
 |FR-05|The system shall allow the student to filter recommendations by dining location.|5|
 |FR-06|The system shall allow the student to set a daily dining dollar target for pacing spending throughout the quarter.|6|
 |FR-07|The system shall indicate how closely each recommended meal matches the student's calorie and macronutrient targets.|7|
+|FR-08|The system shall allow the student to exclude recommended foods containing specified allergens or avoided ingredients.|8|
+|FR-09|The system shall allow the student to save and view favorite meals.|9|
 
 
 
@@ -197,6 +212,8 @@ _THE SYSTEM SHALL..._
 |US-05|The system shall allow the student to filter recommendations by dining location.|TBD|
 |US-06|The system shall allow the student to set a daily dining dollar target to pace spending throughout the quarter.|TBD|
 |US-07|The system shall show how closely each recommended meal matches the student's calorie and macronutrient targets.|TBD|
+|US-08|The system shall allow the student to exclude recommended foods containing specified allergens or avoided ingredients.|TBD|
+|US-09|The system shall allow the student to save and view favorite meals.|TBD|
 
 
 
