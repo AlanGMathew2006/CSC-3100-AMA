@@ -9,3 +9,4 @@ build/
 coverage/
 .vscode/*
 !.vscode/extensions.json
+.agents/
