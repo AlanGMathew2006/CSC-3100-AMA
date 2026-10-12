@@ -1,19 +1,10 @@
 // packages/express-backend/eslint.config.js
 import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
-export default [
-  { ignores: ["dist"] },
-  {
-    files: ["**/*.{js}"],
-    languageOptions: {
-      ecmaVersion: 2020,
-      parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-      },
-    },
-    rules: {
-      ...js.configs.recommended.rules,
-    },
-  },
-];
+export default tseslint.config(
+  { ignores: ["**/dist/**"] },
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  { files: ["**/*.ts"] },
+);
