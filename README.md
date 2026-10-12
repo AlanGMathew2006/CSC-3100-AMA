@@ -1,23 +1,36 @@
-# CSC-3100-AMA
+# CSC-3100-AMA — PolyProvision
 
-## Minimal monorepo boilerplate
-
-This repo keeps a small, professional monorepo structure for a single app plus a shared package scaffold.
+Campus dining planner: track nutrition and Dining Dollars, and get meal
+recommendations. Requirements live in [CONTEXT.md](./CONTEXT.md).
 
 ```
 apps/
-  web/          # React + Vite + TypeScript app
+  web/                # React + Vite + TypeScript client
 packages/
-  shared/       # reusable TypeScript utilities/types
+  express-backend/    # Express + TypeScript API (Supabase Auth + Postgres)
+    supabase/schema.sql   # tables, triggers, RLS policies
+  shared/             # shared TypeScript types/utilities
 ```
 
-### Getting started
+## Getting started
 
 ```powershell
 npm install
-npm run dev
-npm run build
-npm run test
 ```
 
-This is intentionally small and easy to extend. New apps or packages can be added later when the project genuinely grows.
+Copy the env templates and fill in your Supabase project values:
+
+- `apps/web/.env.example` → `apps/web/.env.local`
+- `packages/express-backend/.env.example` → `packages/express-backend/.env`
+
+Run `packages/express-backend/supabase/schema.sql` in the Supabase SQL editor,
+then start both servers:
+
+```powershell
+npm run dev --workspace=packages/express-backend   # API on :8000
+npm run dev                                         # web on :5173
+```
+
+Other scripts: `npm run build`, `npm run lint`, `npm run test`.
+
+Never commit `.env` files or the Supabase service-role key.

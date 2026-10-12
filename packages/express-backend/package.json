@@ -1,27 +1,27 @@
 {
-    "name":  "@csc-3100-ama/express-backend",
-    "private":  true,
-    "version":  "0.0.0",
-    "type":  "module",
-    "main":  "dist/backend.js",
-    "scripts":  {
-                    "dev":  "tsx watch --env-file=.env backend.ts",
-                    "build":  "tsc",
-                    "start":  "node --env-file=.env dist/backend.js",
-                    "typecheck":  "tsc --noEmit",
-                    "lint":  "eslint ."
-                },
-    "dependencies":  {
-                         "@supabase/supabase-js":  "^2.117.3",
-                         "cors":  "^2.8.5",
-                         "express":  "^5.1.0"
-                     },
-    "devDependencies":  {
-                            "@types/cors":  "^2.8.19",
-                            "@types/express":  "^5.0.6",
-                            "@types/node":  "^20.19.43",
-                            "tsx":  "^4.23.15",
-                            "typescript":  "^5.9.3",
-                            "typescript-eslint":  "^8.71.1"
-                        }
+  "name": "@csc-3100-ama/express-backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/backend.js",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env backend.ts",
+    "build": "tsc",
+    "start": "node --env-file=.env dist/backend.js",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.3",
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.43",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.71.1"
+  }
 }

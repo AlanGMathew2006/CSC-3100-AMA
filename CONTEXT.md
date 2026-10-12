@@ -19,6 +19,33 @@ meet my goals without overspending?”
 - Students who need dietary/allergen filters or want convenient
   campus dining locations.
 
+# Evidence and confirmed decisions
+
+Evidence:
+
+- Students need a better way of optimizing their Dining Dollar
+  usage.
+- Students want good food recommendations based on their
+  nutritional needs.
+
+Confirmed decisions:
+
+- Students can view their current Dining Dollars amount.
+- Students can edit filters for their specific nutritional
+  needs.
+
+# Constraints
+
+- Do not include real student names, addresses, or other
+  personal data in GenAI prompts.
+- The system must support poor cellular connectivity for users.
+
+# Open questions
+
+- How should the number of meals per day for a student be
+  calculated?
+- Which nutritional filters should be part of the app?
+
 # Current product scope
 
 # Core MVP user journey:
@@ -199,3 +226,15 @@ A feature is done only when it:
 - Protects user data appropriately.
 - Has no known TypeScript/build errors.
 - Does not silently break another screen or existing flow.
+
+# Task prompt pattern for product-writing requests
+
+When asked to draft product artifacts, use only the evidence and
+confirmed decisions above:
+
+1. Draft one user story for a named user.
+2. Draft Given / When / Then acceptance criteria.
+3. List assumptions separately.
+4. List questions that require a manager or stakeholder
+   decision.
+5. Do not invent policy, timing, or privacy requirements.

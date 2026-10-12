@@ -48,6 +48,39 @@ const handle =
 const queryString = (value: unknown): string | undefined =>
   typeof value === "string" ? value : undefined;
 
+const isoDate = (value: unknown): string | undefined => {
+  const text = queryString(value);
+  return text && !Number.isNaN(Date.parse(text)) ? text : undefined;
+};
+
+// Returns an error message when any listed field is present but not a non-negative number.
+function invalidNumber(body: unknown, keys: string[]): string | null {
+  const record = (body ?? {}) as Record<string, unknown>;
+  for (const key of keys) {
+    const value = record[key];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+      return `${key} must be a non-negative number`;
+    }
+  }
+  return null;
+}
+
+const GOAL_KEYS = ["calories", "protein_g", "carbs_g", "fat_g", "fiber_g"];
+const PROFILE_KEYS = ["dining_dollars_balance", "daily_spending_target"];
+const MEAL_LOG_KEYS = ["price", ...GOAL_KEYS];
+
+const validate =
+  (keys: string[]): RequestHandler =>
+  (req, res, next) => {
+    const problem = invalidNumber(req.body, keys);
+    if (problem) {
+      res.status(400).json({ error: problem });
+      return;
+    }
+    next();
+  };
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
@@ -57,12 +90,14 @@ app.use("/api", requireAuth);
 app.get("/api/profile", handle((req) => svc.getProfile(req.db, req.userId)));
 app.patch(
   "/api/profile",
+  validate(PROFILE_KEYS),
   handle((req) => svc.updateProfile(req.db, req.userId, req.body)),
 );
 
 app.get("/api/goals", handle((req) => svc.getGoals(req.db, req.userId)));
 app.put(
   "/api/goals",
+  validate(GOAL_KEYS),
   handle((req) => svc.upsertGoals(req.db, req.userId, req.body)),
 );
 
@@ -87,6 +122,20 @@ app.get(
 );
 
 app.get(
+  "/api/dashboard",
+  handle((req) => {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay);
+    startOfWeek.setDate(startOfDay.getDate() - ((startOfDay.getDay() + 6) % 7));
+    return svc.getDashboard(req.db, req.userId, {
+      dayStart: isoDate(req.query.day_start) ?? startOfDay.toISOString(),
+      weekStart: isoDate(req.query.week_start) ?? startOfWeek.toISOString(),
+    });
+  }),
+);
+
+app.get(
   "/api/meal-logs",
   handle((req) =>
     svc.listMealLogs(req.db, req.userId, {
@@ -97,12 +146,20 @@ app.get(
 );
 app.post(
   "/api/meal-logs",
+  validate(MEAL_LOG_KEYS),
   handle(async (req, res) => {
-    if (!req.body?.name) {
+    if (typeof req.body?.name !== "string" || !req.body.name.trim()) {
       res.status(400).json({ error: "name is required" });
       return;
     }
     res.status(201).json(await svc.createMealLog(req.db, req.userId, req.body));
+  }),
+);
+app.delete(
+  "/api/meal-logs/:logId",
+  handle(async (req, res) => {
+    await svc.deleteMealLog(req.db, req.userId, String(req.params.logId));
+    res.status(204).end();
   }),
 );
 

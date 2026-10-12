@@ -152,6 +152,30 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
+-- ============ Keep Dining Dollar balance in sync with meal logs ============
+create or replace function public.apply_meal_log_to_balance()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if tg_op = 'INSERT' then
+    update public.profiles
+      set dining_dollars_balance = greatest(dining_dollars_balance - new.price, 0)
+      where id = new.user_id;
+    return new;
+  elsif tg_op = 'DELETE' then
+    update public.profiles
+      set dining_dollars_balance = dining_dollars_balance + old.price
+      where id = old.user_id;
+    return old;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists meal_logs_apply_balance on public.meal_logs;
+create trigger meal_logs_apply_balance
+  after insert or delete on public.meal_logs
+  for each row execute function public.apply_meal_log_to_balance();
+
 -- ============ Row Level Security ============
 alter table public.profiles enable row level security;
 alter table public.user_goals enable row level security;

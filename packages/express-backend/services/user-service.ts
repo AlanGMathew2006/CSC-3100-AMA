@@ -199,6 +199,70 @@ export async function createMealLog(
   );
 }
 
+export async function deleteMealLog(
+  db: SupabaseClient,
+  userId: string,
+  logId: string,
+) {
+  unwrap<unknown>(
+    await db.from("meal_logs").delete().eq("user_id", userId).eq("id", logId),
+  );
+}
+
+export interface Totals {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  spent: number;
+}
+
+function sumLogs(logs: Row[]): Totals {
+  const totals: Totals = {
+    calories: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+    fiber_g: 0,
+    spent: 0,
+  };
+  for (const log of logs) {
+    totals.calories += Number(log.calories ?? 0);
+    totals.protein_g += Number(log.protein_g ?? 0);
+    totals.carbs_g += Number(log.carbs_g ?? 0);
+    totals.fat_g += Number(log.fat_g ?? 0);
+    totals.fiber_g += Number(log.fiber_g ?? 0);
+    totals.spent += Number(log.price ?? 0);
+  }
+  return totals;
+}
+
+// Profile, goals and daily/weekly progress in one call. The client sends its own
+// local day/week boundaries so "today" matches the student's timezone.
+export async function getDashboard(
+  db: SupabaseClient,
+  userId: string,
+  { dayStart, weekStart }: { dayStart: string; weekStart: string },
+) {
+  const [profile, goals, weekLogs] = await Promise.all([
+    getProfile(db, userId),
+    getGoals(db, userId),
+    listMealLogs(db, userId, { from: weekStart }),
+  ]);
+  const dayMs = Date.parse(dayStart);
+  const todayLogs = weekLogs.filter(
+    (log) => Date.parse(String(log.eaten_at)) >= dayMs,
+  );
+  return {
+    profile,
+    goals,
+    today: sumLogs(todayLogs),
+    week: sumLogs(weekLogs),
+    recent_logs: todayLogs,
+  };
+}
+
 export async function listSavedMeals(db: SupabaseClient, userId: string) {
   return unwrap<Row[]>(
     await db

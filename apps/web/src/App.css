@@ -237,10 +237,39 @@ button {
   gap: 8px;
 }
 
-.field-group label {
+.field-group label,
+.field-label {
   font-size: 13px;
   font-weight: 700;
   color: #24302b;
+}
+
+.input-control {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.input-shell:focus-within {
+  border-color: #c5b783;
+  border-width: 2px;
+}
+
+button.eye-icon {
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .input-shell {
