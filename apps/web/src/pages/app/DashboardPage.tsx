@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "../auth";
-import { BrandHeader } from "../components/BrandHeader";
-import { errorMessage } from "../lib/errors";
-import { fetchDashboard, logMeal, type DashboardData } from "../lib/api";
+import { useState } from "react";
+import { useAuth } from "../../auth";
+import { BrandHeader } from "../../components/BrandHeader";
+import { useDashboard } from "../../hooks/useDashboard";
 
 // Mock/seed meal shown until live menu offerings are wired to recommendations.
 const MOCK_MEAL = {
@@ -26,33 +25,16 @@ function greeting(): string {
 
 export function DashboardPage() {
   const { user, signOut } = useAuth();
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [error, setError] = useState("");
+  const { data, error, logging, reload, addMeal } = useDashboard();
   const [view, setView] = useState<"daily" | "weekly">("daily");
-  const [logging, setLogging] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
 
-  const load = useCallback(async () => {
+  async function handleSignOut() {
+    setLogoutError("");
     try {
-      setData(await fetchDashboard());
-      setError("");
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function handleAddMeal() {
-    setLogging(true);
-    try {
-      await logMeal(MOCK_MEAL);
-      await load();
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLogging(false);
+      await signOut();
+    } catch {
+      setLogoutError("Couldn't log out. Please try again.");
     }
   }
 
@@ -122,9 +104,14 @@ export function DashboardPage() {
           <p className="field-helper error" role="alert">
             <span className="alert-icon" aria-hidden="true" />
             {error}{" "}
-            <button type="button" className="link-button" onClick={() => void load()}>
+            <button type="button" className="link-button" onClick={() => void reload()}>
               Retry
             </button>
+          </p>
+        )}
+        {logoutError && (
+          <p className="field-helper error" role="alert">
+            {logoutError}
           </p>
         )}
 
@@ -241,7 +228,7 @@ export function DashboardPage() {
             <button
               type="button"
               className="action-button"
-              onClick={() => void handleAddMeal()}
+              onClick={() => void addMeal(MOCK_MEAL)}
               disabled={logging}
             >
               {logging ? "Adding…" : "Add to Today"}
@@ -253,7 +240,7 @@ export function DashboardPage() {
           <button type="button" className="nav-item nav-item--active">Home</button>
           <button type="button" className="nav-item">Explore</button>
           <button type="button" className="nav-item">Saved</button>
-          <button type="button" className="nav-item" onClick={() => void signOut()}>
+          <button type="button" className="nav-item" onClick={() => void handleSignOut()}>
             Log out
           </button>
         </div>

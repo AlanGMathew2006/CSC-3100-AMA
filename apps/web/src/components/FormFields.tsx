@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 
 type FieldProps = {
   label: string;
@@ -20,6 +20,7 @@ export function Field({
   helper,
 }: FieldProps) {
   const [visible, setVisible] = useState(false);
+  const helperId = useId();
   const isPassword = type === "password";
   const shellClass = invalid ? "input-shell input-shell--error" : "input-shell";
 
@@ -33,6 +34,7 @@ export function Field({
           value={value}
           autoComplete={autoComplete}
           aria-invalid={invalid}
+          aria-describedby={helper ? helperId : undefined}
           onChange={(event) => onChange(event.target.value)}
           required
         />
@@ -41,11 +43,16 @@ export function Field({
             type="button"
             className="eye-icon"
             aria-label={visible ? "Hide password" : "Show password"}
+            aria-pressed={visible}
             onClick={() => setVisible((current) => !current)}
           />
         )}
       </span>
-      {helper && <span className="field-helper success">{helper}</span>}
+      {helper && (
+        <span id={helperId} className="field-helper success">
+          {helper}
+        </span>
+      )}
     </label>
   );
 }

@@ -1,54 +1,18 @@
-import { supabase } from "./supabase";
+import { requireSupabase } from "./supabase";
+import type {
+  DashboardData,
+  GoalsInput,
+  MealLogInput,
+  Profile,
+  ProfileInput,
+} from "../types/dashboard";
 
 const API_URL =
   (import.meta.env.VITE_API_URL as string | undefined) ??
   "http://localhost:8000";
 
-export interface Profile {
-  id: string;
-  display_name: string | null;
-  dining_dollars_balance: number;
-  daily_spending_target: number | null;
-  onboarding_completed: boolean;
-}
-
-export interface Goals {
-  calories: number | null;
-  protein_g: number | null;
-  carbs_g: number | null;
-  fat_g: number | null;
-  fiber_g: number | null;
-}
-
-export interface Totals {
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
-  fiber_g: number;
-  spent: number;
-}
-
-export interface DashboardData {
-  profile: Profile | null;
-  goals: Goals | null;
-  today: Totals;
-  week: Totals;
-}
-
-export interface MealLogInput {
-  name: string;
-  location_name?: string;
-  price?: number;
-  calories?: number;
-  protein_g?: number;
-  carbs_g?: number;
-  fat_g?: number;
-  fiber_g?: number;
-}
-
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const { data } = await supabase.auth.getSession();
+  const { data } = await requireSupabase().auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("You are signed out. Please log in again.");
 
@@ -97,5 +61,23 @@ export function logMeal(meal: MealLogInput): Promise<unknown> {
   return request("/api/meal-logs", {
     method: "POST",
     body: JSON.stringify(meal),
+  });
+}
+
+export function fetchProfile(): Promise<Profile | null> {
+  return request<Profile | null>("/api/profile");
+}
+
+export function updateProfile(fields: ProfileInput): Promise<Profile> {
+  return request<Profile>("/api/profile", {
+    method: "PATCH",
+    body: JSON.stringify(fields),
+  });
+}
+
+export function saveGoals(goals: GoalsInput): Promise<unknown> {
+  return request("/api/goals", {
+    method: "PUT",
+    body: JSON.stringify(goals),
   });
 }

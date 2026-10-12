@@ -1,30 +1,37 @@
 import { useState, type FormEvent } from "react";
-import { useAuth } from "../auth";
-import { BrandHeader } from "../components/BrandHeader";
-import { Field, FormMessage } from "../components/FormFields";
-import { errorMessage } from "../lib/errors";
+import { useAuth } from "../../auth";
+import { BrandHeader } from "../../components/BrandHeader";
+import { Field, FormMessage } from "../../components/FormFields";
+import { GoogleButton } from "../../components/GoogleButton";
+import { useGoogleSignIn } from "../../hooks/useGoogleSignIn";
+import { authErrorMessage, isInvalidCredentials } from "../../lib/authErrors";
+import { isValidEmail, normalizeEmail } from "../../lib/validation";
 
 type LoginPageProps = {
   onCreateAccount: () => void;
 };
 
 export function LoginPage({ onCreateAccount }: LoginPageProps) {
-  const { signIn, signInWithGoogle, resetPassword } = useAuth();
+  const { signIn, resetPassword } = useAuth();
+  const google = useGoogleSignIn();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [credentialsInvalid, setCredentialsInvalid] = useState(false);
   const [notice, setNotice] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError("");
+    setCredentialsInvalid(false);
     setNotice("");
     setSubmitting(true);
     try {
-      await signIn(email.trim(), password);
+      await signIn(email, password);
     } catch (err) {
-      setError(errorMessage(err));
+      setCredentialsInvalid(isInvalidCredentials(err));
+      setError(authErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
@@ -32,25 +39,17 @@ export function LoginPage({ onCreateAccount }: LoginPageProps) {
 
   async function handleForgotPassword() {
     setError("");
+    setCredentialsInvalid(false);
     setNotice("");
-    if (!email.trim()) {
+    if (!isValidEmail(normalizeEmail(email))) {
       setError("Enter your email above, then choose Forgot password.");
       return;
     }
     try {
-      await resetPassword(email.trim());
+      await resetPassword(email);
       setNotice("Check your email for a password reset link.");
     } catch (err) {
-      setError(errorMessage(err));
-    }
-  }
-
-  async function handleGoogle() {
-    setError("");
-    try {
-      await signInWithGoogle();
-    } catch (err) {
-      setError(errorMessage(err));
+      setError(authErrorMessage(err));
     }
   }
 
@@ -71,6 +70,7 @@ export function LoginPage({ onCreateAccount }: LoginPageProps) {
             value={email}
             onChange={setEmail}
             autoComplete="email"
+            invalid={credentialsInvalid}
           />
           <Field
             label="Password"
@@ -78,9 +78,9 @@ export function LoginPage({ onCreateAccount }: LoginPageProps) {
             value={password}
             onChange={setPassword}
             autoComplete="current-password"
-            invalid={Boolean(error)}
+            invalid={credentialsInvalid}
           />
-          <FormMessage error={error} notice={notice} />
+          <FormMessage error={error || google.error} notice={notice} />
 
           <button
             type="button"
@@ -100,10 +100,7 @@ export function LoginPage({ onCreateAccount }: LoginPageProps) {
             <span>or</span>
           </div>
 
-          <button type="button" className="secondary-button" onClick={handleGoogle}>
-            <span className="google-mark">G</span>
-            Continue with Google
-          </button>
+          <GoogleButton onClick={() => void google.start()} loading={google.loading} />
         </div>
 
         <p className="signup-copy">

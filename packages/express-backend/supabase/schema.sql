@@ -139,13 +139,35 @@ create trigger user_preferences_set_updated_at
 
 -- ============ Auto-create profile on signup ============
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
 begin
   insert into public.profiles (id, display_name)
-  values (new.id, new.raw_user_meta_data ->> 'display_name');
+  values (
+    new.id,
+    left(
+      nullif(
+        btrim(
+          coalesce(
+            new.raw_user_meta_data ->> 'display_name',
+            new.raw_user_meta_data ->> 'full_name',
+            new.raw_user_meta_data ->> 'name'
+          )
+        ),
+        ''
+      ),
+      80
+    )
+  )
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
+
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
 
 drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
@@ -186,12 +208,15 @@ alter table public.menu_offerings enable row level security;
 alter table public.meal_logs enable row level security;
 alter table public.saved_meals enable row level security;
 
+revoke all on public.profiles from anon;
+grant select, update on public.profiles to authenticated;
+
 drop policy if exists "Users read own profile" on public.profiles;
 create policy "Users read own profile" on public.profiles
-  for select to authenticated using (auth.uid() = id);
+  for select to authenticated using ((select auth.uid()) = id);
 drop policy if exists "Users update own profile" on public.profiles;
 create policy "Users update own profile" on public.profiles
-  for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
+  for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
 
 drop policy if exists "Users manage own goals" on public.user_goals;
 create policy "Users manage own goals" on public.user_goals
