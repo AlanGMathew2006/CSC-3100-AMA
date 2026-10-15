@@ -37,7 +37,7 @@ function SignedInApp() {
 }
 
 function App() {
-  const { session, loading, recovering } = useAuth();
+  const { session, loading, recovering, cancelPasswordRecovery } = useAuth();
   const [screen, setScreen] = useState<Screen>("welcome");
   const [confirmed, setConfirmed] = useState(isConfirmationPending);
 
@@ -76,7 +76,16 @@ function App() {
     );
   }
 
-  if (session && recovering) return <ResetPasswordPage />;
+  if (recovering) {
+    return (
+      <ResetPasswordPage
+        onBackToLogin={() => {
+          cancelPasswordRecovery();
+          setScreen("login");
+        }}
+      />
+    );
+  }
 
   if (session) return <SignedInApp />;
 

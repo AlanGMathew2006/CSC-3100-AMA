@@ -9,7 +9,11 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { isSupabaseConfigured, requireSupabase } from "./lib/supabase";
 import { CONFIRMATION_REDIRECT, isConfirmationPending } from "./lib/emailConfirmation";
-import { clearRecoveryLink, isRecoveryLink } from "./lib/recoveryLink";
+import {
+  clearRecoveryLink,
+  isRecoveryLink,
+  PASSWORD_RESET_REDIRECT,
+} from "./lib/recoveryLink";
 import { normalizeEmail } from "./lib/validation";
 
 interface AuthContextValue {
@@ -23,6 +27,7 @@ interface AuthContextValue {
   resetPassword: (email: string) => Promise<void>;
   // True after the user opens a password reset email link.
   recovering: boolean;
+  cancelPasswordRecovery: () => void;
   updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -102,11 +107,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async resetPassword(email) {
         const { error } = await requireSupabase().auth.resetPasswordForEmail(
           normalizeEmail(email),
-          { redirectTo: window.location.origin },
+          { redirectTo: PASSWORD_RESET_REDIRECT },
         );
         if (error) throw error;
       },
       recovering,
+      cancelPasswordRecovery() {
+        clearRecoveryLink();
+        setRecovering(false);
+      },
       async updatePassword(password) {
         const { error } = await requireSupabase().auth.updateUser({ password });
         if (error) throw error;

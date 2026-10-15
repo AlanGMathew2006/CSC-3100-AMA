@@ -23,6 +23,12 @@ Copy the env templates and fill in your Supabase project values:
 - `apps/web/.env.example` → `apps/web/.env.local`
 - `packages/express-backend/.env.example` → `packages/express-backend/.env`
 
+In Supabase **Authentication → URL Configuration**, add the web app's
+password-reset URL to **Redirect URLs** (for local development,
+`http://localhost:5173/reset-password`; add the equivalent URL for each
+deployed web-app origin). The app sends password-reset emails back to this
+route, where the user can choose a new password.
+
 Run `packages/express-backend/supabase/schema.sql` in the Supabase SQL editor,
 then start both servers:
 

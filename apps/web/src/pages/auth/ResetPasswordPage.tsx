@@ -5,8 +5,12 @@ import { Field, FormMessage } from "../../components/FormFields";
 import { authErrorMessage } from "../../lib/authErrors";
 import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "../../lib/validation";
 
-export function ResetPasswordPage() {
-  const { updatePassword } = useAuth();
+type ResetPasswordPageProps = {
+  onBackToLogin: () => void;
+};
+
+export function ResetPasswordPage({ onBackToLogin }: ResetPasswordPageProps) {
+  const { session, updatePassword } = useAuth();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -43,39 +47,64 @@ export function ResetPasswordPage() {
     <div className="page-shell">
       <BrandHeader />
 
-      <form className="auth-content" onSubmit={handleSubmit} noValidate>
-        <div className="intro-block">
-          <h1>Choose a new password</h1>
-          <p>Enter a new password for your account.</p>
-        </div>
+      {!session ? (
+        <section className="auth-content">
+          <div className="intro-block">
+            <h1>Reset link expired</h1>
+            <p>
+              This password reset link is invalid or has expired. Request a new
+              link and open it again.
+            </p>
+          </div>
+          <div className="auth-actions">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={onBackToLogin}
+            >
+              Back to log in
+            </button>
+          </div>
+        </section>
+      ) : (
+        <form className="auth-content" onSubmit={handleSubmit} noValidate>
+          <div className="intro-block">
+            <h1>Choose a new password</h1>
+            <p>Enter a new password for your account.</p>
+          </div>
 
-        <div className="form-stack">
-          <Field
-            label="New password"
-            type="password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            helper={PASSWORD_HINT}
-            invalid={invalidField === "password"}
-          />
-          <Field
-            label="Confirm new password"
-            type="password"
-            value={confirm}
-            onChange={setConfirm}
-            autoComplete="new-password"
-            invalid={invalidField === "confirm"}
-          />
-          <FormMessage error={error} />
-        </div>
+          <div className="form-stack">
+            <Field
+              label="New password"
+              type="password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              helper={PASSWORD_HINT}
+              invalid={invalidField === "password"}
+            />
+            <Field
+              label="Confirm new password"
+              type="password"
+              value={confirm}
+              onChange={setConfirm}
+              autoComplete="new-password"
+              invalid={invalidField === "confirm"}
+            />
+            <FormMessage error={error} />
+          </div>
 
-        <div className="auth-actions">
-          <button type="submit" className="primary-button" disabled={submitting}>
-            {submitting ? "Saving…" : "Save new password"}
-          </button>
-        </div>
-      </form>
+          <div className="auth-actions">
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={submitting}
+            >
+              {submitting ? "Saving…" : "Save new password"}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }
