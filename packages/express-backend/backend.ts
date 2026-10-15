@@ -68,6 +68,14 @@ function invalidNumber(body: unknown, keys: string[]): string | null {
 
 const GOAL_KEYS = ["calories", "protein_g", "carbs_g", "fat_g", "fiber_g"];
 const PROFILE_KEYS = ["dining_dollars_balance", "daily_spending_target"];
+const ONBOARDING_KEYS = [
+  "dining_dollars_balance",
+  "daily_spending_target",
+  "calories",
+  "protein_g",
+  "carbs_g",
+  "fat_g",
+];
 const MEAL_LOG_KEYS = ["price", ...GOAL_KEYS];
 
 const validate =
@@ -76,6 +84,23 @@ const validate =
     const problem = invalidNumber(req.body, keys);
     if (problem) {
       res.status(400).json({ error: problem });
+      return;
+    }
+    next();
+  };
+
+const validateIntegers =
+  (keys: string[]): RequestHandler =>
+  (req, res, next) => {
+    const record = (req.body ?? {}) as Record<string, unknown>;
+    const invalid = keys.find(
+      (key) =>
+        record[key] !== undefined &&
+        record[key] !== null &&
+        !Number.isInteger(record[key]),
+    );
+    if (invalid) {
+      res.status(400).json({ error: `${invalid} must be a whole number` });
       return;
     }
     next();
@@ -99,6 +124,21 @@ app.put(
   "/api/goals",
   validate(GOAL_KEYS),
   handle((req) => svc.upsertGoals(req.db, req.userId, req.body)),
+);
+app.post(
+  "/api/onboarding/complete",
+  validate(ONBOARDING_KEYS),
+  validateIntegers(["calories", "protein_g", "carbs_g", "fat_g"]),
+  handle((req, res) => {
+    const missing = ONBOARDING_KEYS.find(
+      (key) => typeof req.body?.[key] !== "number",
+    );
+    if (missing) {
+      res.status(400).json({ error: `${missing} is required` });
+      return;
+    }
+    return svc.completeOnboarding(req.db, req.body);
+  }),
 );
 
 app.get(

@@ -1,4 +1,5 @@
 import { requireSupabase } from "./supabase";
+import type { OnboardingInput } from "@csc-3100-ama/shared";
 import type {
   DashboardData,
   GoalsInput,
@@ -12,22 +13,42 @@ const API_URL =
   "http://localhost:8000";
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const { data } = await requireSupabase().auth.getSession();
-  const token = data.session?.access_token;
+  const auth = requireSupabase().auth;
+  const { data } = await auth.getSession();
+  let token = data.session?.access_token;
   if (!token) throw new Error("You are signed out. Please log in again.");
 
-  let response: Response;
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...init.headers,
-      },
-    });
-  } catch {
-    throw new Error("Can't reach the PolyProvision server. Try again.");
+  const send = async (accessToken: string): Promise<Response> => {
+    try {
+      return await fetch(`${API_URL}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...init.headers,
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+    } catch {
+      throw new Error("Can't reach the PolyProvision server. Try again.");
+    }
+  };
+
+  let response = await send(token);
+  if (response.status === 401) {
+    const { data: refreshed, error } = await auth.refreshSession();
+    if (error || !refreshed.session) {
+      const { error: signOutError } = await auth.signOut({ scope: "local" });
+      if (signOutError) throw signOutError;
+      throw new Error("Your session expired. Please log in again.");
+    }
+
+    token = refreshed.session.access_token;
+    response = await send(token);
+    if (response.status === 401) {
+      const { error: signOutError } = await auth.signOut({ scope: "local" });
+      if (signOutError) throw signOutError;
+      throw new Error("Your session expired. Please log in again.");
+    }
   }
 
   if (response.status === 204) return undefined as T;
@@ -79,5 +100,12 @@ export function saveGoals(goals: GoalsInput): Promise<unknown> {
   return request("/api/goals", {
     method: "PUT",
     body: JSON.stringify(goals),
+  });
+}
+
+export function completeOnboarding(input: OnboardingInput): Promise<void> {
+  return request("/api/onboarding/complete", {
+    method: "POST",
+    body: JSON.stringify(input),
   });
 }

@@ -27,9 +27,23 @@ function SignedInApp() {
     );
   }
 
-  // A missing profile row (error or none) falls through to the dashboard,
-  // which shows its own error/retry state.
-  if (!error && profile && !profile.onboarding_completed) {
+  if (error) {
+    return (
+      <div className="page-shell">
+        <BrandHeader />
+        <section className="auth-content">
+          <p className="field-helper error" role="alert">
+            {error}{" "}
+            <button type="button" className="link-button" onClick={() => void reload()}>
+              Retry
+            </button>
+          </p>
+        </section>
+      </div>
+    );
+  }
+
+  if (!profile || !profile.onboarding_completed) {
     return <OnboardingPage onComplete={() => void reload()} />;
   }
 
