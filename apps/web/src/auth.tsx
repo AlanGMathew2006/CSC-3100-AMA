@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           email: normalizeEmail(email),
           password,
           options: {
-            // Read by the handle_new_user trigger to fill profiles.display_name.
+            // Used to fill profiles.display_name when onboarding is completed.
             data: { display_name: name.trim() },
             emailRedirectTo: CONFIRMATION_REDIRECT,
           },

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { OnboardingInput } from "@csc-3100-ama/shared";
 
 // Data access for user-owned tables. All calls use a user-scoped client, so RLS enforces ownership.
 
@@ -104,6 +105,22 @@ export async function upsertGoals(
       .upsert({ user_id: userId, ...pick(allowed) })
       .select()
       .single(),
+  );
+}
+
+export async function completeOnboarding(
+  db: SupabaseClient,
+  fields: OnboardingInput,
+) {
+  return unwrap<null>(
+    await db.rpc("complete_onboarding", {
+      p_dining_dollars_balance: fields.dining_dollars_balance,
+      p_daily_spending_target: fields.daily_spending_target,
+      p_calories: fields.calories,
+      p_protein_g: fields.protein_g,
+      p_carbs_g: fields.carbs_g,
+      p_fat_g: fields.fat_g,
+    }),
   );
 }
 

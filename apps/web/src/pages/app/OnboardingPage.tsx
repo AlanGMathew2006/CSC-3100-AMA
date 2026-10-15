@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
-import { saveGoals, updateProfile } from "../../lib/api";
+import { completeOnboarding } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
 
 type OnboardingPageProps = {
@@ -45,19 +45,24 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
       setError("Enter a number of 0 or more in every field.");
       return;
     }
+    const fractionalGoal = (
+      ["calories", "protein", "carbs", "fat"] as const
+    ).find((name) => !Number.isInteger(toNumber(values[name])));
+    if (fractionalGoal) {
+      setErrorField(fractionalGoal);
+      setError("Enter whole numbers for your nutrition goals.");
+      return;
+    }
 
     setSubmitting(true);
     try {
-      await saveGoals({
+      await completeOnboarding({
+        dining_dollars_balance: toNumber(values.balance),
+        daily_spending_target: toNumber(values.target),
         calories: toNumber(values.calories),
         protein_g: toNumber(values.protein),
         carbs_g: toNumber(values.carbs),
         fat_g: toNumber(values.fat),
-      });
-      await updateProfile({
-        dining_dollars_balance: toNumber(values.balance),
-        daily_spending_target: toNumber(values.target),
-        onboarding_completed: true,
       });
       onComplete();
     } catch (err) {

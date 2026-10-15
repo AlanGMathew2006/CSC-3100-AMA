@@ -29,8 +29,16 @@ password-reset URL to **Redirect URLs** (for local development,
 deployed web-app origin). The app sends password-reset emails back to this
 route, where the user can choose a new password.
 
-Run `packages/express-backend/supabase/schema.sql` in the Supabase SQL editor,
-then start both servers:
+For an existing Supabase project, apply these SQL migrations in order in the
+SQL editor (or with the Supabase CLI):
+
+1. `packages/express-backend/supabase/migrations/20261015000000_google_onboarding_profile.sql`
+2. `packages/express-backend/supabase/migrations/20261015010000_defer_all_profiles_until_onboarding.sql`
+
+If the first migration was already applied, apply only the second. For a new
+project, run `packages/express-backend/supabase/schema.sql`. New email and
+Google users then receive their profile only when onboarding is submitted.
+Start both servers:
 
 ```powershell
 npm run dev --workspace=packages/express-backend   # API on :8000
