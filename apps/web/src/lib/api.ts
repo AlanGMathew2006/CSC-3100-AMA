@@ -1,0 +1,83 @@
+import { requireSupabase } from "./supabase";
+import type {
+  DashboardData,
+  GoalsInput,
+  MealLogInput,
+  Profile,
+  ProfileInput,
+} from "../types/dashboard";
+
+const API_URL =
+  (import.meta.env.VITE_API_URL as string | undefined) ??
+  "http://localhost:8000";
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const { data } = await requireSupabase().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("You are signed out. Please log in again.");
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        ...init.headers,
+      },
+    });
+  } catch {
+    throw new Error("Can't reach the PolyProvision server. Try again.");
+  }
+
+  if (response.status === 204) return undefined as T;
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error((body as { error?: string }).error ?? "Request failed");
+  }
+  return body as T;
+}
+
+function localDayStart(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function localWeekStart(): Date {
+  const start = localDayStart();
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+
+export function fetchDashboard(): Promise<DashboardData> {
+  const params = new URLSearchParams({
+    day_start: localDayStart().toISOString(),
+    week_start: localWeekStart().toISOString(),
+  });
+  return request<DashboardData>(`/api/dashboard?${params}`);
+}
+
+export function logMeal(meal: MealLogInput): Promise<unknown> {
+  return request("/api/meal-logs", {
+    method: "POST",
+    body: JSON.stringify(meal),
+  });
+}
+
+export function fetchProfile(): Promise<Profile | null> {
+  return request<Profile | null>("/api/profile");
+}
+
+export function updateProfile(fields: ProfileInput): Promise<Profile> {
+  return request<Profile>("/api/profile", {
+    method: "PATCH",
+    body: JSON.stringify(fields),
+  });
+}
+
+export function saveGoals(goals: GoalsInput): Promise<unknown> {
+  return request("/api/goals", {
+    method: "PUT",
+    body: JSON.stringify(goals),
+  });
+}

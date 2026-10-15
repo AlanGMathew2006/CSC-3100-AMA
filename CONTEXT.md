@@ -19,6 +19,33 @@ meet my goals without overspending?”
 - Students who need dietary/allergen filters or want convenient
   campus dining locations.
 
+# Evidence and confirmed decisions
+
+Evidence:
+
+- Students need a better way of optimizing their Dining Dollar
+  usage.
+- Students want good food recommendations based on their
+  nutritional needs.
+
+Confirmed decisions:
+
+- Students can view their current Dining Dollars amount.
+- Students can edit filters for their specific nutritional
+  needs.
+
+# Constraints
+
+- Do not include real student names, addresses, or other
+  personal data in GenAI prompts.
+- The system must support poor cellular connectivity for users.
+
+# Open questions
+
+- How should the number of meals per day for a student be
+  calculated?
+- Which nutritional filters should be part of the app?
+
 # Current product scope
 
 # Core MVP user journey:
@@ -175,6 +202,75 @@ After editing:
 3. Call out blocked items or missing credentials instead of
    guessing.
 
+## General implementation rules of thumb
+
+### Keep changes small and focused
+
+- Implement one user-facing behavior at a time.
+- Prefer a small, complete vertical slice over partially building
+  many features.
+- Do not refactor unrelated code while implementing a feature.
+- If a change affects more than 3–5 files, explain why before
+  editing.
+
+### Keep files and components understandable
+
+- One component should have one clear responsibility.
+- Keep `App.tsx` focused on app-level routing/layout; move full
+  screens into `pages/`.
+- Split a component when it contains multiple screens, unrelated
+  responsibilities, or becomes difficult to scan (often around
+  200–300 lines).
+- Extract a reusable UI element only when it is used in multiple
+  places or is clearly complex enough to deserve its own file.
+
+### TypeScript standards
+
+- Use TypeScript for all new app code.
+- Avoid `any`; define types/interfaces for user, meal, goal,
+  preference, and recommendation data.
+- Prefer explicit names: `remainingDiningDollars` is better than
+  `balance` when context is unclear.
+- Keep shared types in `src/types/`.
+
+### Data and Supabase rules
+
+- Keep Supabase queries out of presentational UI components when
+  possible; place them in `services/` or hooks.
+- Validate user input before sending it to Supabase.
+- Handle loading, success, empty, and error states for every
+  data-driven screen.
+- Never trust client-side validation alone for security.
+- Use RLS to enforce access to each student’s own data.
+
+### UI and accessibility
+
+- Build mobile-first and verify the layout at narrow phone widths.
+- Use semantic HTML elements for the web app.
+- Every button needs a clear label and visible loading/disabled
+  state when submitting.
+- Do not rely on color alone to communicate macro progress,
+  warnings, or errors.
+- Keep recommendation explanations concise and understandable.
+
+### Business-logic rules
+
+- Keep recommendation scoring deterministic and explainable for
+  the MVP.
+- Put nutrition, budget, and ranking calculations in dedicated
+  utility/service files.
+- Write calculations so inputs and outputs are easy to test.
+- Do not add AI, paid APIs, or complex cloud infrastructure unless
+  the task explicitly requires it.
+
+### Before declaring work complete
+
+- Test the main happy path manually.
+- Test at least one error or empty state.
+- Run the relevant lint, type-check, or build command.
+- Report changed files, testing performed, and any remaining
+  limitation or manual setup step.
+
 # Preferred implementation sequence
 
 1. Finish responsive web UI and prototype flows.
@@ -199,3 +295,15 @@ A feature is done only when it:
 - Protects user data appropriately.
 - Has no known TypeScript/build errors.
 - Does not silently break another screen or existing flow.
+
+# Task prompt pattern for product-writing requests
+
+When asked to draft product artifacts, use only the evidence and
+confirmed decisions above:
+
+1. Draft one user story for a named user.
+2. Draft Given / When / Then acceptance criteria.
+3. List assumptions separately.
+4. List questions that require a manager or stakeholder
+   decision.
+5. Do not invent policy, timing, or privacy requirements.
