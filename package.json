@@ -8,12 +8,13 @@
   ],
   "scripts": {
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ./.prettierrc",
-    "dev": "npm run dev --workspace=apps/web",
+    "dev": "concurrently -k -n web,api \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=packages/express-backend\"",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present"
   },
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "@eslint/compat": "^2.1.1",
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^9.39.0",

@@ -38,12 +38,15 @@ SQL editor (or with the Supabase CLI):
 If the first migration was already applied, apply only the second. For a new
 project, run `packages/express-backend/supabase/schema.sql`. New email and
 Google users then receive their profile only when onboarding is submitted.
-Start both servers:
+Start both the web app and API from the repository root:
 
 ```powershell
-npm run dev --workspace=packages/express-backend   # API on :8000
-npm run dev                                         # web on :5173
+npm run dev
 ```
+
+The web app runs on `http://localhost:5173` and the API on
+`http://localhost:8000`. To run only the API, use
+`npm run dev --workspace=packages/express-backend`.
 
 Other scripts: `npm run build`, `npm run lint`, `npm run test`.
 
