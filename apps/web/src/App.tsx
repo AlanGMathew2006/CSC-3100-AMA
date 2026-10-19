@@ -9,7 +9,9 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { isSupabaseConfigured } from "./lib/supabase";
+import type { AppTab } from "./components/BottomNav";
 import { DashboardPage } from "./pages/app/DashboardPage";
+import { MenuPage } from "./pages/app/MenuPage";
 import { OnboardingPage } from "./pages/app/OnboardingPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
@@ -18,6 +20,7 @@ type Screen = "welcome" | "login" | "signup";
 // Only mounted while signed in, so the profile is fetched per session.
 function SignedInApp() {
   const { profile, loading, error, reload } = useProfile();
+  const [tab, setTab] = useState<AppTab>("home");
 
   if (loading) {
     return (
@@ -47,7 +50,8 @@ function SignedInApp() {
     return <OnboardingPage onComplete={() => void reload()} />;
   }
 
-  return <DashboardPage />;
+  if (tab === "explore") return <MenuPage onNavigate={setTab} />;
+  return <DashboardPage onNavigate={setTab} />;
 }
 
 function App() {

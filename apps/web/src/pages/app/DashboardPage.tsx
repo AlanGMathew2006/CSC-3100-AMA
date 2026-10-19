@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../auth";
+import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { useDashboard } from "../../hooks/useDashboard";
 
@@ -23,7 +24,7 @@ function greeting(): string {
   return "Good evening";
 }
 
-export function DashboardPage() {
+export function DashboardPage({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
   const { user, signOut } = useAuth();
   const { data, error, logging, reload, addMeal } = useDashboard();
   const [view, setView] = useState<"daily" | "weekly">("daily");
@@ -236,14 +237,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="bottom-nav" aria-label="Main navigation">
-          <button type="button" className="nav-item nav-item--active">Home</button>
-          <button type="button" className="nav-item">Explore</button>
-          <button type="button" className="nav-item">Saved</button>
-          <button type="button" className="nav-item" onClick={() => void handleSignOut()}>
-            Log out
-          </button>
-        </div>
+        <BottomNav active="home" onNavigate={onNavigate} onSignOut={() => void handleSignOut()} />
       </section>
     </div>
   );

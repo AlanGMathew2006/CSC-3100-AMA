@@ -7,6 +7,7 @@ import express, {
 } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createUserClient } from "./services/supabase.js";
+import * as menu from "./services/menu-service.js";
 import * as svc from "./services/user-service.js";
 
 interface AuthedRequest extends Request {
@@ -151,6 +152,8 @@ app.put(
 );
 
 app.get("/api/locations", handle((req) => svc.listLocations(req.db)));
+// Full imported campus menu: every item with its latest price per location, plus combos.
+app.get("/api/menu", handle((req) => menu.getMenu(req.db)));
 app.get(
   "/api/menu-offerings",
   handle((req) =>

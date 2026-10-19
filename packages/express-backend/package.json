@@ -9,7 +9,9 @@
     "build": "tsc",
     "start": "node --env-file=.env dist/backend.js",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "import:menu": "tsx --env-file=.env scripts/import-menu.ts",
+    "test": "tsx --test scripts/**/*.test.ts services/**/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
