@@ -12,5 +12,5 @@
     "noEmit": false,
     "noUncheckedIndexedAccess": true
   },
-  "include": ["backend.ts", "services"]
+  "include": ["backend.ts", "services", "scripts"]
 }

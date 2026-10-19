@@ -917,3 +917,130 @@ button.eye-icon {
     padding: 0;
   }
 }
+
+/* ============ Campus menu (Explore tab) ============ */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.menu-header h1 {
+  margin: 8px 0 0;
+  font-size: 22px;
+  color: #154734;
+}
+
+.menu-header p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #68736d;
+}
+
+.menu-search input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid #c5b783;
+  border-radius: 12px;
+  background: #fff;
+  color: #24302b;
+  font-size: 14px;
+}
+
+.menu-search input:focus {
+  outline: 2px solid #154734;
+  outline-offset: 1px;
+}
+
+.menu-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.menu-chip {
+  flex: 0 0 auto;
+  background: #fff;
+  border: 1px solid #c5b783;
+  white-space: nowrap;
+}
+
+.menu-chip.toggle-option--active {
+  background: #154734;
+  border-color: #154734;
+  color: #fff;
+}
+
+.menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu-item {
+  background: #fff;
+  border: 1px solid #ece6d9;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.menu-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.menu-item h3 {
+  margin: 2px 0 0;
+  font-size: 15px;
+  color: #154734;
+}
+
+.menu-serving {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: #68736d;
+}
+
+.menu-price {
+  flex: 0 0 auto;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 800;
+  color: #154734;
+}
+
+.menu-price--muted {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8a7d4c;
+}
+
+.menu-item .meal-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.menu-empty {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #68736d;
+}

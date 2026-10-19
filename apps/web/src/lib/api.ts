@@ -1,5 +1,5 @@
 import { requireSupabase } from "./supabase";
-import type { OnboardingInput } from "@csc-3100-ama/shared";
+import type { MenuResponse, OnboardingInput } from "@csc-3100-ama/shared";
 import type {
   DashboardData,
   GoalsInput,
@@ -108,4 +108,8 @@ export function completeOnboarding(input: OnboardingInput): Promise<void> {
     method: "POST",
     body: JSON.stringify(input),
   });
+}
+
+export function fetchMenu(): Promise<MenuResponse> {
+  return request<MenuResponse>("/api/menu");
 }
