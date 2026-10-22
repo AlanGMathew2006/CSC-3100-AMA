@@ -38,6 +38,9 @@ export interface PreferencesInput {
   cuisine_preferences?: string[];
   preferred_location_ids?: string[];
   excluded_foods?: string[];
+  nutrition_priorities?: string[];
+  budget_alerts_enabled?: boolean;
+  theme?: "light" | "dark";
 }
 
 export interface MealLogInput {
@@ -113,13 +116,16 @@ export async function completeOnboarding(
   fields: OnboardingInput,
 ) {
   return unwrap<null>(
-    await db.rpc("complete_onboarding", {
+    await db.rpc("complete_onboarding_with_preferences", {
       p_dining_dollars_balance: fields.dining_dollars_balance,
       p_daily_spending_target: fields.daily_spending_target,
       p_calories: fields.calories,
       p_protein_g: fields.protein_g,
       p_carbs_g: fields.carbs_g,
       p_fat_g: fields.fat_g,
+      p_nutrition_priorities: fields.nutrition_priorities ?? [],
+      p_dietary_restrictions: fields.dietary_restrictions ?? [],
+      p_preferred_location_ids: fields.preferred_location_ids ?? [],
     }),
   );
 }
@@ -145,6 +151,9 @@ export async function upsertPreferences(
     cuisine_preferences: fields.cuisine_preferences,
     preferred_location_ids: fields.preferred_location_ids,
     excluded_foods: fields.excluded_foods,
+    nutrition_priorities: fields.nutrition_priorities,
+    budget_alerts_enabled: fields.budget_alerts_enabled,
+    theme: fields.theme,
   };
   return unwrap<Row>(
     await db
@@ -277,6 +286,7 @@ export async function getDashboard(
     today: sumLogs(todayLogs),
     week: sumLogs(weekLogs),
     recent_logs: todayLogs,
+    week_logs: weekLogs,
   };
 }
 

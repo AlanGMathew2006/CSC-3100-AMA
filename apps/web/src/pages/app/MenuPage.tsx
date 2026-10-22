@@ -1,320 +1,196 @@
 import { useMemo, useState } from "react";
-import type { MenuCombo, MenuItem } from "@csc-3100-ama/shared";
-import { useAuth } from "../../auth";
-import {
-  BottomNav,
-  type AppTab
-} from "../../components/BottomNav";
+import type { MenuItem } from "@csc-3100-ama/shared";
+import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
+import { MealCard, mealPrice } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
+import { useSavedMeals } from "../../hooks/useSavedMeals";
 
-const money = (amount: number) => `$${amount.toFixed(2)}`;
-
-const formatDate = (isoDate: string) =>
-  new Date(`${isoDate}T00:00:00`).toLocaleDateString(
-    undefined,
-    {
-      month: "short",
-      day: "numeric",
-      year: "numeric"
-    }
-  );
-
-// "Subway (Kennedy Library)" -> "Kennedy Library"
-const areaOf = (
-  locationName: string,
-  campusArea: string | null
-) => campusArea ?? locationName.replace(/^.*\((.*)\)$/, "$1");
-
-function priceLabel(item: MenuItem): {
-  text: string;
-  muted: boolean;
-} {
-  if (item.offerings.length === 0) {
-    return item.meal_component
-      ? { text: "Combo only", muted: true }
-      : { text: "Price unavailable", muted: true };
-  }
-  const prices = item.offerings.map((o) => o.price);
-  const low = Math.min(...prices);
-  const high = Math.max(...prices);
-  return {
-    text:
-      low === high
-        ? money(low)
-        : `${money(low)}–${money(high)}`,
-    muted: false
-  };
-}
-
-// Per-location prices, only worth showing when they differ between locations.
-function locationPrices(item: MenuItem): string | null {
-  if (new Set(item.offerings.map((o) => o.price)).size < 2)
-    return null;
-  return item.offerings
-    .map(
-      (o) =>
-        `${areaOf(o.location_name, o.campus_area)} ${money(o.price)}`
-    )
-    .join(" · ");
-}
-
-function groupByCategory(
-  items: MenuItem[]
-): [string, MenuItem[]][] {
-  const groups = new Map<string, MenuItem[]>();
-  for (const item of items) {
-    const list = groups.get(item.category) ?? [];
-    list.push(item);
-    groups.set(item.category, list);
-  }
-  return [...groups.entries()];
-}
-
-function MenuItemCard({
-  item,
-  showRestaurant
-}: {
-  item: MenuItem;
-  showRestaurant: boolean;
-}) {
-  const price = priceLabel(item);
-  const byLocation = locationPrices(item);
-  return (
-    <li className="menu-item">
-      <div className="menu-item-top">
-        <div>
-          {showRestaurant && (
-            <span className="meal-label">
-              {item.restaurant}
-            </span>
-          )}
-          <h3>{item.name}</h3>
-          {item.serving && (
-            <span className="menu-serving">{item.serving}</span>
-          )}
-          {byLocation && (
-            <span className="menu-serving">{byLocation}</span>
-          )}
-        </div>
-        <span
-          className={`menu-price${price.muted ? " menu-price--muted" : ""}`}>
-          {price.text}
-        </span>
-      </div>
-      <div className="meal-meta">
-        <span>
-          {item.calories == null
-            ? "– kcal"
-            : `${item.calories} kcal`}
-        </span>
-        <span>
-          <span className="legend-dot legend-dot--protein" />{" "}
-          {item.protein_g ?? "–"}g protein
-        </span>
-        <span>
-          <span className="legend-dot legend-dot--carbs" />{" "}
-          {item.carbs_g ?? "–"}g carbs
-        </span>
-        <span>
-          <span className="legend-dot legend-dot--fat" />{" "}
-          {item.fat_g ?? "–"}g fat
-        </span>
-      </div>
-    </li>
-  );
-}
-
-function ComboList({ combos }: { combos: MenuCombo[] }) {
-  if (combos.length === 0) return null;
-  return (
-    <section className="menu-section">
-      <div className="section-header">Combos & Meals</div>
-      <ul className="menu-list">
-        {combos.map((combo) => (
-          <li className="menu-item" key={combo.id}>
-            <div className="menu-item-top">
-              <div>
-                <h3>{combo.name}</h3>
-                {combo.description && (
-                  <span className="menu-serving">
-                    {combo.description}
-                  </span>
-                )}
-              </div>
-              <span className="menu-price">
-                {money(combo.price)}
-              </span>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+const FILTERS = ["Location", "Price", "Protein", "Calories", "Dietary"] as const;
+type Filter = (typeof FILTERS)[number];
 
 export function MenuPage({
-  onNavigate
+  onNavigate,
+  onSelectMeal,
+  onToast,
 }: {
   onNavigate: (tab: AppTab) => void;
+  onSelectMeal: (item: MenuItem) => void;
+  onToast: (message: string) => void;
 }) {
-  const { signOut } = useAuth();
   const { menu, loading, error, reload } = useMenu();
-  const [selected, setSelected] = useState<string | null>(null);
+  const saved = useSavedMeals();
   const [query, setQuery] = useState("");
-  const [logoutError, setLogoutError] = useState("");
-
-  const restaurants = useMemo(
-    () =>
-      [
-        ...new Set(
-          menu?.items.map((item) => item.restaurant) ?? []
-        )
-      ].sort(),
-    [menu]
-  );
-  const restaurant = selected ?? restaurants[0] ?? null;
+  const [filter, setFilter] = useState<Filter>("Location");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterSelection, setFilterSelection] = useState("");
   const search = query.trim().toLowerCase();
 
-  // Searching looks across every restaurant; otherwise show the selected one.
-  const items = useMemo(() => {
-    const all = menu?.items ?? [];
-    if (search) {
-      return all.filter((item) =>
-        `${item.name} ${item.category} ${item.restaurant}`
-          .toLowerCase()
-          .includes(search)
-      );
+  const locations = useMemo(() => {
+    const byId = new Map<string, string>();
+    for (const item of menu?.items ?? []) {
+      for (const offering of item.offerings) {
+        byId.set(offering.location_id, offering.campus_area ?? offering.location_name);
+      }
     }
-    return all.filter((item) => item.restaurant === restaurant);
-  }, [menu, search, restaurant]);
+    return [...byId.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [menu]);
+  const items = useMemo(() => {
+    const filtered = (menu?.items ?? []).filter((item) => {
+      const matchesSearch = `${item.name} ${item.category} ${item.restaurant}`
+        .toLowerCase()
+        .includes(search);
+      if (!matchesSearch) return false;
+      if (!filterSelection) return true;
+      if (filterSelection.startsWith("location:")) {
+        return item.offerings.some(
+          (offering) => offering.location_id === filterSelection.slice("location:".length),
+        );
+      }
+      if (filterSelection === "price:10") return (mealPrice(item) ?? Infinity) < 10;
+      if (filterSelection === "price:12") return (mealPrice(item) ?? Infinity) <= 12;
+      if (filterSelection === "protein:20") return (item.protein_g ?? 0) >= 20;
+      if (filterSelection === "protein:30") return (item.protein_g ?? 0) >= 30;
+      if (filterSelection === "calories:500") return (item.calories ?? Infinity) <= 500;
+      if (filterSelection === "calories:600") return (item.calories ?? Infinity) <= 600;
+      if (filterSelection.startsWith("diet:")) {
+        const diet = filterSelection.slice("diet:".length);
+        return item.tags?.some((tag) =>
+          tag.toLowerCase().replace(/_/g, "-").includes(diet),
+        ) ?? false;
+      }
+      return true;
+    });
+    return filtered.sort((a, b) => {
+      if (filter === "Price") return (mealPrice(a) ?? Infinity) - (mealPrice(b) ?? Infinity);
+      if (filter === "Protein") return (b.protein_g ?? -1) - (a.protein_g ?? -1);
+      if (filter === "Calories") return (a.calories ?? Infinity) - (b.calories ?? Infinity);
+      if (filter === "Dietary") {
+        const score = (item: MenuItem) =>
+          /tofu|vegan|vegetarian|veggie|salad/i.test(`${item.name} ${item.category}`) ? 1 : 0;
+        return score(b) - score(a);
+      }
+      return a.restaurant.localeCompare(b.restaurant);
+    });
+  }, [filter, filterSelection, menu, search]);
 
-  const combos = search
-    ? []
-    : (menu?.combos ?? []).filter(
-        (c) => c.restaurant === restaurant
-      );
-  const latestDate = menu?.items
-    .flatMap((item) =>
-      item.offerings.map((o) => o.service_date)
-    )
-    .sort()
-    .at(-1);
+  const filterOptions = useMemo(() => {
+    if (filter === "Location") {
+      return [
+        ["", "All locations"],
+        ...locations.map(([id, label]) => [`location:${id}`, label]),
+      ];
+    }
+    if (filter === "Price") return [["", "Any price"], ["price:10", "Under $10"], ["price:12", "Under $12"]];
+    if (filter === "Protein") return [["", "Any protein"], ["protein:20", "20g or more"], ["protein:30", "30g or more"]];
+    if (filter === "Calories") return [["", "Any calories"], ["calories:500", "500 or fewer"], ["calories:600", "600 or fewer"]];
+    return [["", "Any diet"], ["diet:vegetarian", "Vegetarian"], ["diet:vegan", "Vegan"], ["diet:gluten-free", "Gluten-free"]];
+  }, [filter, locations]);
 
-  async function handleSignOut() {
-    setLogoutError("");
-    try {
-      await signOut();
-    } catch {
-      setLogoutError("Couldn't log out. Please try again.");
+  async function handleToggle(item: MenuItem) {
+    const result = await saved.toggle(item.id);
+    if (result !== null) {
+      onToast(result ? "Meal saved to your plans" : "Meal removed from saved plans");
+    } else {
+      onToast("Couldn't update saved meals");
     }
   }
 
   return (
     <div className="page-shell page-shell--dashboard">
       <BrandHeader />
-
-      <section className="dashboard-shell">
-        <header className="menu-header">
-          <h1>Campus Menu</h1>
-          {latestDate && (
-            <p>Prices as of {formatDate(latestDate)}</p>
-          )}
-        </header>
-
+      <main className="app-content explore-content">
+        <h1>Explore Meals</h1>
         {error && (
           <p className="field-helper error" role="alert">
-            <span className="alert-icon" aria-hidden="true" />
             {error}{" "}
-            <button
-              type="button"
-              className="link-button"
-              onClick={() => void reload()}>
+            <button type="button" className="link-button" onClick={() => void reload()}>
               Retry
             </button>
           </p>
         )}
-        {logoutError && (
-          <p className="field-helper error" role="alert">
-            {logoutError}
-          </p>
-        )}
+        {saved.error && <p className="field-helper error" role="alert">{saved.error}</p>}
 
-        <label className="menu-search">
-          <span className="visually-hidden">
-            Search the menu
-          </span>
+        <label className="explore-search">
+          <img src="/assets/figma/search.svg" alt="" aria-hidden="true" />
+          <span className="visually-hidden">Search meals or locations</span>
           <input
             type="search"
-            placeholder="Search all restaurants"
+            placeholder="Search meals or locations"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
 
-        {!search && restaurants.length > 0 && (
-          <div
-            className="menu-chips"
-            role="tablist"
-            aria-label="Restaurants">
-            {restaurants.map((name) => (
-              <button
-                key={name}
-                type="button"
-                role="tab"
-                aria-selected={name === restaurant}
-                className={`toggle-option menu-chip${name === restaurant ? " toggle-option--active" : ""}`}
-                onClick={() => setSelected(name)}>
-                {name}
-              </button>
+        <div className="explore-filters" role="group" aria-label="Sort meals">
+          {FILTERS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`choice-chip${filter === option ? " choice-chip--selected" : ""}`}
+              aria-pressed={filter === option}
+              onClick={() => {
+                if (filter !== option) setFilterSelection("");
+                setFilter(option);
+                setFilterOpen(filter === option ? !filterOpen : true);
+              }}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+        {filterOpen && (
+          <label className="filter-select-wrap">
+            <span className="visually-hidden">Choose a {filter.toLowerCase()} filter</span>
+            <select
+              value={filterSelection}
+              onChange={(event) => setFilterSelection(event.target.value)}
+            >
+              {filterOptions.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </label>
+        )}
+
+        {loading && !menu ? (
+          <p className="field-helper success" role="status">Loading meals…</p>
+        ) : items.length ? (
+          <ul className="explore-meal-list">
+            {items.map((item) => (
+              <li key={item.id}>
+                <MealCard
+                  item={item}
+                  saved={saved.isSaved(item.id)}
+                  onSelect={() => onSelectMeal(item)}
+                  onToggleSaved={() => void handleToggle(item)}
+                />
+              </li>
             ))}
-          </div>
-        )}
-
-        {loading && !menu && (
-          <p className="menu-empty">Loading menu…</p>
-        )}
-
-        {!loading && menu && menu.items.length === 0 && (
-          <p className="menu-empty">
-            No menu data yet. Run{" "}
-            <code>npm run import:menu</code> in
-            packages/express-backend.
+          </ul>
+        ) : (
+          <p className="empty-card">
+            {search ? `No meals match “${query.trim()}”.` : "No meals are available right now."}
           </p>
         )}
 
-        {search &&
-          items.length === 0 &&
-          menu &&
-          menu.items.length > 0 && (
-            <p className="menu-empty">
-              No items match “{query.trim()}”.
-            </p>
-          )}
-
-        {groupByCategory(items).map(([category, list]) => (
-          <section className="menu-section" key={category}>
-            <div className="section-header">{category}</div>
-            <ul className="menu-list">
-              {list.map((item) => (
-                <MenuItemCard
-                  key={item.id}
-                  item={item}
-                  showRestaurant={Boolean(search)}
-                />
-              ))}
-            </ul>
+        {menu && menu.combos.length > 0 && (
+          <section className="combo-section">
+            <h2>Combos &amp; Meals</h2>
+            {menu.combos.map((combo) => (
+              <article className="combo-card" key={combo.id}>
+                <div>
+                  <span className="meal-label">{combo.restaurant}</span>
+                  <strong>{combo.name}</strong>
+                  {combo.description && <span>{combo.description}</span>}
+                </div>
+                <b>${combo.price.toFixed(2)}</b>
+              </article>
+            ))}
           </section>
-        ))}
-
-        <ComboList combos={combos} />
-
-        <BottomNav
-          active="explore"
-          onNavigate={onNavigate}
-          onSignOut={() => void handleSignOut()}
-        />
-      </section>
+        )}
+      </main>
+      <BottomNav active="explore" onNavigate={onNavigate} />
     </div>
   );
 }

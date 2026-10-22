@@ -2,10 +2,13 @@ import { requireSupabase } from "./supabase";
 import type { MenuResponse, OnboardingInput } from "@csc-3100-ama/shared";
 import type {
   DashboardData,
+  DiningLocation,
   GoalsInput,
   MealLogInput,
   Profile,
   ProfileInput,
+  SavedMeal,
+  UserPreferences,
 } from "../types/dashboard";
 
 const API_URL =
@@ -78,6 +81,12 @@ export function fetchDashboard(): Promise<DashboardData> {
   return request<DashboardData>(`/api/dashboard?${params}`);
 }
 
+export function fetchMealLogs(from?: string): Promise<MealLogInput[]> {
+  const query = new URLSearchParams();
+  if (from) query.set("from", from);
+  return request<MealLogInput[]>(`/api/meal-logs${query.size ? `?${query}` : ""}`);
+}
+
 export function logMeal(meal: MealLogInput): Promise<unknown> {
   return request("/api/meal-logs", {
     method: "POST",
@@ -112,4 +121,37 @@ export function completeOnboarding(input: OnboardingInput): Promise<void> {
 
 export function fetchMenu(): Promise<MenuResponse> {
   return request<MenuResponse>("/api/menu");
+}
+
+export function fetchPreferences(): Promise<UserPreferences | null> {
+  return request<UserPreferences | null>("/api/preferences");
+}
+
+export function updatePreferences(
+  fields: Partial<UserPreferences>,
+): Promise<UserPreferences> {
+  return request<UserPreferences>("/api/preferences", {
+    method: "PUT",
+    body: JSON.stringify(fields),
+  });
+}
+
+export function fetchLocations(): Promise<DiningLocation[]> {
+  return request<DiningLocation[]>("/api/locations");
+}
+
+export function fetchSavedMeals(): Promise<SavedMeal[]> {
+  return request<SavedMeal[]>("/api/saved-meals");
+}
+
+export function saveMeal(mealId: string): Promise<unknown> {
+  return request(`/api/saved-meals/${encodeURIComponent(mealId)}`, {
+    method: "PUT",
+  });
+}
+
+export function unsaveMeal(mealId: string): Promise<void> {
+  return request(`/api/saved-meals/${encodeURIComponent(mealId)}`, {
+    method: "DELETE",
+  });
 }

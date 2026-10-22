@@ -53,7 +53,7 @@ export async function getMenu(
     db
       .from("meals")
       .select(
-        "id, name, restaurant, category, serving, calories, protein_g, carbs_g, fat_g, meal_component, " +
+        "id, name, restaurant, category, serving, calories, protein_g, carbs_g, fat_g, meal_component, tags, " +
           "offerings:menu_offerings(price, service_date, available, location:dining_locations(id, name, campus_area))"
       )
       .not("restaurant", "is", null)

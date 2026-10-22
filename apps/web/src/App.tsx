@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import type { MenuItem } from "@csc-3100-ama/shared";
 import { useAuth } from "./auth";
 import { BrandHeader } from "./components/BrandHeader";
+import { Toast } from "./components/Toast";
+import type { AppTab } from "./components/BottomNav";
 import { useProfile } from "./hooks/useProfile";
 import { clearConfirmation, isConfirmationPending } from "./lib/emailConfirmation";
 import { EmailConfirmedPage } from "./pages/auth/EmailConfirmedPage";
@@ -9,10 +12,12 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { isSupabaseConfigured } from "./lib/supabase";
-import type { AppTab } from "./components/BottomNav";
 import { DashboardPage } from "./pages/app/DashboardPage";
+import { MealDetailPage } from "./pages/app/MealDetailPage";
 import { MenuPage } from "./pages/app/MenuPage";
 import { OnboardingPage } from "./pages/app/OnboardingPage";
+import { ProfilePage } from "./pages/app/ProfilePage";
+import { SavedMealsPage } from "./pages/app/SavedMealsPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
 type Screen = "welcome" | "login" | "signup";
@@ -21,6 +26,33 @@ type Screen = "welcome" | "login" | "signup";
 function SignedInApp() {
   const { profile, loading, error, reload } = useProfile();
   const [tab, setTab] = useState<AppTab>("home");
+  const [returnTab, setReturnTab] = useState<AppTab>("home");
+  const [selectedMeal, setSelectedMeal] = useState<MenuItem | null>(null);
+  const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = window.setTimeout(() => setToastMessage(""), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toastMessage]);
+
+  const onToast = useCallback((message: string) => setToastMessage(message), []);
+
+  function navigate(nextTab: AppTab) {
+    setSelectedMeal(null);
+    setTab(nextTab);
+  }
+
+  function openMeal(item: MenuItem) {
+    setReturnTab(tab);
+    setSelectedMeal(item);
+    setTab("explore");
+  }
+
+  function closeMeal() {
+    setSelectedMeal(null);
+    setTab(returnTab);
+  }
 
   if (loading) {
     return (
@@ -50,8 +82,42 @@ function SignedInApp() {
     return <OnboardingPage onComplete={() => void reload()} />;
   }
 
-  if (tab === "explore") return <MenuPage onNavigate={setTab} />;
-  return <DashboardPage onNavigate={setTab} />;
+  const page = selectedMeal ? (
+    <MealDetailPage
+      item={selectedMeal}
+      onBack={closeMeal}
+      onSelectMeal={setSelectedMeal}
+      onNavigate={navigate}
+      onToast={onToast}
+    />
+  ) : tab === "explore" ? (
+    <MenuPage
+      onNavigate={navigate}
+      onSelectMeal={openMeal}
+      onToast={onToast}
+    />
+  ) : tab === "saved" ? (
+    <SavedMealsPage
+      onNavigate={navigate}
+      onSelectMeal={openMeal}
+      onToast={onToast}
+    />
+  ) : tab === "profile" ? (
+    <ProfilePage profile={profile} onNavigate={navigate} onProfileChanged={() => void reload()} />
+  ) : (
+    <DashboardPage
+      onNavigate={navigate}
+      onSelectMeal={openMeal}
+      onToast={onToast}
+    />
+  );
+
+  return (
+    <>
+      {page}
+      <Toast message={toastMessage} />
+    </>
+  );
 }
 
 function App() {

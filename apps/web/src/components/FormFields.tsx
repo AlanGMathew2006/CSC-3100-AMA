@@ -6,6 +6,8 @@ type FieldProps = {
   value: string;
   onChange: (value: string) => void;
   autoComplete?: string;
+  inputMode?: "decimal" | "numeric";
+  prefix?: string;
   invalid?: boolean;
   helper?: string;
 };
@@ -16,6 +18,8 @@ export function Field({
   value,
   onChange,
   autoComplete,
+  inputMode,
+  prefix,
   invalid = false,
   helper,
 }: FieldProps) {
@@ -28,9 +32,11 @@ export function Field({
     <label className="field-group">
       <span className="field-label">{label}</span>
       <span className={shellClass}>
+        {prefix && <span className="input-prefix">{prefix}</span>}
         <input
           className="input-control"
           type={isPassword && visible ? "text" : type}
+          inputMode={inputMode}
           value={value}
           autoComplete={autoComplete}
           aria-invalid={invalid}
@@ -45,7 +51,9 @@ export function Field({
             aria-label={visible ? "Hide password" : "Show password"}
             aria-pressed={visible}
             onClick={() => setVisible((current) => !current)}
-          />
+          >
+            <img src="/assets/figma/eye.svg" alt="" aria-hidden="true" />
+          </button>
         )}
       </span>
       {helper && (
@@ -67,7 +75,7 @@ export function FormMessage({
   if (error) {
     return (
       <p className="field-helper error" role="alert">
-        <span className="alert-icon" aria-hidden="true" />
+        <img className="alert-icon" src="/assets/figma/alert.svg" alt="" aria-hidden="true" />
         {error}
       </p>
     );

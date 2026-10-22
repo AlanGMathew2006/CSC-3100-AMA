@@ -107,6 +107,45 @@ const validateIntegers =
     next();
   };
 
+const validateStringArrays =
+  (keys: string[]): RequestHandler =>
+  (req, res, next) => {
+    const record = (req.body ?? {}) as Record<string, unknown>;
+    const invalid = keys.find(
+      (key) =>
+        record[key] !== undefined &&
+        (!Array.isArray(record[key]) ||
+          !(record[key] as unknown[]).every(
+            (value) => typeof value === "string" && value.length <= 100,
+          )),
+    );
+    if (invalid) {
+      res.status(400).json({ error: `${invalid} must be an array of strings` });
+      return;
+    }
+    next();
+  };
+
+const validatePreferenceSettings: RequestHandler = (req, res, next) => {
+  const record = (req.body ?? {}) as Record<string, unknown>;
+  if (
+    record.budget_alerts_enabled !== undefined &&
+    typeof record.budget_alerts_enabled !== "boolean"
+  ) {
+    res.status(400).json({ error: "budget_alerts_enabled must be a boolean" });
+    return;
+  }
+  if (
+    record.theme !== undefined &&
+    record.theme !== "light" &&
+    record.theme !== "dark"
+  ) {
+    res.status(400).json({ error: "theme must be light or dark" });
+    return;
+  }
+  next();
+};
+
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
@@ -130,6 +169,11 @@ app.post(
   "/api/onboarding/complete",
   validate(ONBOARDING_KEYS),
   validateIntegers(["calories", "protein_g", "carbs_g", "fat_g"]),
+  validateStringArrays([
+    "nutrition_priorities",
+    "dietary_restrictions",
+    "preferred_location_ids",
+  ]),
   handle((req, res) => {
     const missing = ONBOARDING_KEYS.find(
       (key) => typeof req.body?.[key] !== "number",
@@ -148,6 +192,15 @@ app.get(
 );
 app.put(
   "/api/preferences",
+  validateStringArrays([
+    "dietary_restrictions",
+    "allergens",
+    "cuisine_preferences",
+    "preferred_location_ids",
+    "excluded_foods",
+    "nutrition_priorities",
+  ]),
+  validatePreferenceSettings,
   handle((req) => svc.upsertPreferences(req.db, req.userId, req.body)),
 );
 

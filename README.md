@@ -34,9 +34,10 @@ SQL editor (or with the Supabase CLI):
 
 1. `packages/express-backend/supabase/migrations/20261015000000_google_onboarding_profile.sql`
 2. `packages/express-backend/supabase/migrations/20261015010000_defer_all_profiles_until_onboarding.sql`
+3. `packages/express-backend/supabase/migrations/20261022000000_design_preferences.sql`
 
-If the first migration was already applied, apply only the second. For a new
-project, run `packages/express-backend/supabase/schema.sql`. New email and
+If the first migration was already applied, apply the second and third. For a
+new project, run `packages/express-backend/supabase/schema.sql`. New email and
 Google users then receive their profile only when onboarding is submitted.
 Start both the web app and API from the repository root:
 

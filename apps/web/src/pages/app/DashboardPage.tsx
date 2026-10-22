@@ -1,19 +1,18 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { MenuItem } from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
+import { cheapestOffering, MealCard, mealPrice } from "../../components/MealCard";
 import { useDashboard } from "../../hooks/useDashboard";
+import { useMenu } from "../../hooks/useMenu";
+import { useSavedMeals } from "../../hooks/useSavedMeals";
+import { fetchPreferences } from "../../lib/api";
+import { errorMessage } from "../../lib/errors";
+import type { UserPreferences } from "../../types/dashboard";
+import { NutritionSheet } from "./NutritionSheet";
 
-// Mock/seed meal shown until live menu offerings are wired to recommendations.
-const MOCK_MEAL = {
-  name: "Chicken Teriyaki Bowl",
-  location_name: "Vista Grande",
-  price: 9.5,
-  calories: 520,
-  protein_g: 38,
-  carbs_g: 62,
-  fat_g: 14,
-};
+type NutrientKey = "protein_g" | "carbs_g" | "fat_g" | "fiber_g";
 
 const money = (amount: number) => `$${amount.toFixed(2)}`;
 
@@ -24,38 +23,44 @@ function greeting(): string {
   return "Good evening";
 }
 
-export function DashboardPage({ onNavigate }: { onNavigate: (tab: AppTab) => void }) {
-  const { user, signOut } = useAuth();
+export function DashboardPage({
+  onNavigate,
+  onSelectMeal,
+  onToast,
+}: {
+  onNavigate: (tab: AppTab) => void;
+  onSelectMeal: (item: MenuItem) => void;
+  onToast: (message: string) => void;
+}) {
+  const { user } = useAuth();
   const { data, error, logging, reload, addMeal } = useDashboard();
+  const menu = useMenu();
+  const saved = useSavedMeals();
   const [view, setView] = useState<"daily" | "weekly">("daily");
-  const [logoutError, setLogoutError] = useState("");
+  const [selectedNutrient, setSelectedNutrient] = useState<NutrientKey | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [preferencesError, setPreferencesError] = useState("");
 
-  async function handleSignOut() {
-    setLogoutError("");
-    try {
-      await signOut();
-    } catch {
-      setLogoutError("Couldn't log out. Please try again.");
-    }
-  }
+  useEffect(() => {
+    void fetchPreferences()
+      .then(setPreferences)
+      .catch((err: unknown) => setPreferencesError(errorMessage(err)));
+  }, []);
 
   const days = view === "daily" ? 1 : 7;
   const totals = data ? (view === "daily" ? data.today : data.week) : null;
   const goalFor = (value: number | null | undefined) =>
     value == null ? null : value * days;
-
   const caloriesGoal = goalFor(data?.goals?.calories);
   const caloriesEaten = Math.round(totals?.calories ?? 0);
   const caloriesRemaining =
     caloriesGoal == null ? null : Math.max(caloriesGoal - caloriesEaten, 0);
-
   const macros = [
-    { key: "protein", label: "Protein", eaten: totals?.protein_g, goal: goalFor(data?.goals?.protein_g) },
-    { key: "carbs", label: "Carbs", eaten: totals?.carbs_g, goal: goalFor(data?.goals?.carbs_g) },
-    { key: "fat", label: "Fat", eaten: totals?.fat_g, goal: goalFor(data?.goals?.fat_g) },
-    { key: "fiber", label: "Fiber", eaten: totals?.fiber_g, goal: goalFor(data?.goals?.fiber_g) },
+    { key: "protein_g" as const, label: "Protein", eaten: totals?.protein_g, goal: goalFor(data?.goals?.protein_g), color: "protein" },
+    { key: "carbs_g" as const, label: "Carbs", eaten: totals?.carbs_g, goal: goalFor(data?.goals?.carbs_g), color: "carbs" },
+    { key: "fat_g" as const, label: "Fat", eaten: totals?.fat_g, goal: goalFor(data?.goals?.fat_g), color: "fat" },
+    { key: "fiber_g" as const, label: "Fiber", eaten: totals?.fiber_g, goal: goalFor(data?.goals?.fiber_g), color: "fiber" },
   ];
-
   const balance = data?.profile?.dining_dollars_balance ?? 0;
   const dailyTarget = data?.profile?.daily_spending_target ?? null;
   const spentToday = data?.today.spent ?? 0;
@@ -74,75 +79,138 @@ export function DashboardPage({ onNavigate }: { onNavigate: (tab: AppTab) => voi
     user?.email?.split("@")[0] ||
     "Student";
 
+  const recommendations = useMemo(() => {
+    const items = [...(menu.menu?.items ?? [])];
+    const priorities = preferences?.nutrition_priorities ?? [];
+    const preferredLocations = new Set(preferences?.preferred_location_ids ?? []);
+    const score = (item: MenuItem) => {
+      let value = 0;
+      if (preferredLocations.size && item.offerings.some((offering) => preferredLocations.has(offering.location_id))) value -= 100;
+      if (priorities.includes("High protein")) value -= item.protein_g ?? 0;
+      if (priorities.includes("Lower calorie")) value += item.calories ?? 10000;
+      if (priorities.includes("Budget-friendly")) value += (mealPrice(item) ?? 10000) * 10;
+      if (priorities.includes("Balanced")) {
+        const calorieGoal = data?.goals?.calories ?? 2000;
+        const proteinGoal = data?.goals?.protein_g ?? 100;
+        value += Math.abs((item.calories ?? calorieGoal) - calorieGoal) / Math.max(calorieGoal, 1);
+        value += Math.abs((item.protein_g ?? proteinGoal) - proteinGoal) / Math.max(proteinGoal, 1);
+      }
+      return value;
+    };
+    return items.sort((a, b) => score(a) - score(b)).slice(0, 3);
+  }, [data?.goals, menu.menu, preferences]);
+  const weeklyDays = useMemo(() => {
+    const today = new Date();
+    const mondayOffset = (today.getDay() + 6) % 7;
+    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayOffset);
+    const labels = ["M", "T", "W", "T", "F", "S", "S"];
+    return labels.map((label, index) => {
+      const day = new Date(monday);
+      day.setDate(monday.getDate() + index);
+      const calories = (data?.week_logs ?? [])
+        .filter((log) => {
+          if (!log.eaten_at) return false;
+          const eaten = new Date(log.eaten_at);
+          return eaten.getFullYear() === day.getFullYear() &&
+            eaten.getMonth() === day.getMonth() &&
+            eaten.getDate() === day.getDate();
+        })
+        .reduce((sum, log) => sum + (log.calories ?? 0), 0);
+      return { label, calories };
+    });
+  }, [data?.week_logs]);
+  const maxDailyCalories = Math.max(
+    caloriesGoal == null ? 1 : caloriesGoal / days,
+    ...weeklyDays.map((day) => day.calories),
+    1,
+  );
+
+  async function handleAddMeal(item: MenuItem) {
+    const price = mealPrice(item);
+    const offering = cheapestOffering(item);
+    const succeeded = await addMeal({
+      meal_id: item.id,
+      location_id: offering?.location_id,
+      name: item.name,
+      location_name: offering?.location_name ?? item.restaurant,
+      price: price ?? 0,
+      calories: item.calories ?? 0,
+      protein_g: item.protein_g ?? 0,
+      carbs_g: item.carbs_g ?? 0,
+      fat_g: item.fat_g ?? 0,
+    });
+    if (succeeded) onToast("Meal added to today");
+  }
+
+  async function toggleSaved(item: MenuItem) {
+    const result = await saved.toggle(item.id);
+    if (result !== null) {
+      onToast(result ? "Meal saved to your plans" : "Meal removed from saved plans");
+    } else {
+      onToast("Couldn't update saved meals");
+    }
+  }
+
   return (
     <div className="page-shell page-shell--dashboard">
       <BrandHeader />
-
-      <section className="dashboard-shell">
+      <main className="app-content dashboard-content">
         <header className="user-header">
           <div className="profile-pill">
-            <div className="avatar" aria-label="profile avatar" />
+            <img
+              className="avatar"
+              src={`/assets/figma/dashboard-${view}-avatar.jpg`}
+              alt=""
+            />
             <div className="profile-copy">
-              <span className="profile-greeting">{greeting()}</span>
+              <span className="profile-greeting">{greeting()},</span>
               <strong>{displayName}</strong>
             </div>
           </div>
           <button type="button" className="alert-button" aria-label="Notifications">
-            <svg
-              className="bell-icon"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-              <path d="M10 21h4" />
-              <circle className="bell-notification" cx="19" cy="5" r="3" />
-            </svg>
+            <img src="/assets/figma/bell-dot.svg" alt="" aria-hidden="true" />
           </button>
         </header>
 
         {error && (
           <p className="field-helper error" role="alert">
-            <span className="alert-icon" aria-hidden="true" />
             {error}{" "}
             <button type="button" className="link-button" onClick={() => void reload()}>
               Retry
             </button>
           </p>
         )}
-        {logoutError && (
-          <p className="field-helper error" role="alert">
-            {logoutError}
-          </p>
-        )}
-
+        {menu.error && <p className="field-helper error" role="alert">{menu.error}</p>}
+        {saved.error && <p className="field-helper error" role="alert">{saved.error}</p>}
+        {preferencesError && <p className="field-helper error" role="alert">{preferencesError}</p>}
         <div className="toggle-pill" aria-label="Daily or weekly view">
-          <button
-            type="button"
-            className={`toggle-option${view === "daily" ? " toggle-option--active" : ""}`}
-            onClick={() => setView("daily")}
-          >
-            Daily
-          </button>
-          <button
-            type="button"
-            className={`toggle-option${view === "weekly" ? " toggle-option--active" : ""}`}
-            onClick={() => setView("weekly")}
-          >
-            Weekly
-          </button>
+          {(["daily", "weekly"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={`toggle-option${view === option ? " toggle-option--active" : ""}`}
+              aria-pressed={view === option}
+              onClick={() => setView(option)}
+            >
+              {option === "daily" ? "Daily" : "Weekly"}
+            </button>
+          ))}
         </div>
 
-        <div className="section-header">
+        <h2 className="section-header">
           {view === "daily" ? "Today's Nutrition" : "This Week's Nutrition"}
-        </div>
+        </h2>
 
-        <div className="nutrition-card">
+        <section className={`nutrition-card${view === "weekly" ? " nutrition-card--weekly" : ""}`}>
           <div className="nutrition-chart" aria-label="Nutrition summary">
             <div className="chart-center">
-              <strong>{(caloriesRemaining ?? caloriesEaten).toLocaleString()}</strong>
+              <strong>
+                {view === "weekly" && caloriesGoal != null
+                  ? Math.round(caloriesEaten / 7).toLocaleString()
+                  : (caloriesRemaining ?? caloriesEaten).toLocaleString()}
+              </strong>
               <span>
-                {caloriesRemaining == null ? "Calories Logged" : "Calories Remaining"}
+                {view === "weekly" ? "Weekly average" : caloriesRemaining == null ? "Calories Logged" : "Calories Remaining"}
               </span>
               <small>
                 {caloriesGoal == null
@@ -151,94 +219,137 @@ export function DashboardPage({ onNavigate }: { onNavigate: (tab: AppTab) => voi
               </small>
             </div>
           </div>
-
           <div className="legend-list">
             {macros.map((macro) => (
               <div className="legend-item" key={macro.key}>
-                <span className={`legend-dot legend-dot--${macro.key}`} />
+                <span className={`legend-dot legend-dot--${macro.color}`} />
                 {macro.label}
               </div>
             ))}
           </div>
-        </div>
+          {view === "weekly" && (
+            <div className="weekly-chart" aria-label="Calories logged each day this week">
+              {weeklyDays.map((day, index) => (
+                <div className="weekly-bar-column" key={`${day.label}-${index}`}>
+                  <span className="weekly-bar-track">
+                    <i style={{ height: `${Math.max((day.calories / maxDailyCalories) * 100, day.calories ? 8 : 0)}%` }} />
+                  </span>
+                  <small>{day.label}</small>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
-        <div className="section-header">Nutrient Summary</div>
-
+        <h2 className="section-header">Nutrient Summary</h2>
         <div className="summary-row">
           {macros.map((macro) => (
-            <div className="summary-box" key={macro.key}>
-              <div className="summary-title">
-                <span className={`legend-dot legend-dot--${macro.key}`} /> {macro.label}
-              </div>
-              <div className="summary-value">
-                {Math.round(macro.eaten ?? 0)}
-                {macro.goal == null ? "g" : ` / ${macro.goal}g`}
-              </div>
-            </div>
+            <button
+              type="button"
+              className="summary-box"
+              key={macro.key}
+              onClick={() => setSelectedNutrient(macro.key)}
+            >
+              <span className="summary-title">
+                <span className={`legend-dot legend-dot--${macro.color}`} />
+                {macro.label}
+              </span>
+              <strong className="summary-value">
+                {Math.round(macro.eaten ?? 0)} / {macro.goal ?? "—"}g
+              </strong>
+              <span className="summary-progress">
+                <i style={{ width: `${macro.goal ? Math.min(((macro.eaten ?? 0) / macro.goal) * 100, 100) : 0}%` }} />
+              </span>
+            </button>
           ))}
         </div>
 
-        <div className="dollars-card">
+        <section className="dollars-card">
+          <span className="dollars-eyebrow">Dining Dollars</span>
           <div className="dollars-header">
-            <span className="dollar-value">{money(balance)}</span>
+            <strong className="dollar-value">{money(balance)}</strong>
             <span className="remaining-label">remaining</span>
           </div>
           <div className="dollars-meta">
-            <span>
-              {dailyTarget == null
-                ? money(spentToday)
-                : `${money(spentToday)} of ${money(dailyTarget)}`}
-            </span>
-            <span className="tag">spent today</span>
+            <span>{dailyTarget == null ? money(spentToday) : `${money(spentToday)} of ${money(dailyTarget)} target spent today`}</span>
+            {preferences?.budget_alerts_enabled && dailyTarget != null && (
+              <span className="tag">
+                {spentToday > dailyTarget
+                  ? "Over target"
+                  : spentToday >= dailyTarget * 0.8
+                    ? "Near target"
+                    : "On track"}
+              </span>
+            )}
           </div>
           <div className="progress-track">
             <span className="progress-bar" style={{ width: `${budgetPercent}%` }} />
           </div>
-          <div className="budget-copy">Spent this week: {money(spentWeek)}</div>
+          <p className="budget-copy">Spent this week: {money(spentWeek)}</p>
           {weeklyBudget != null && (
             <>
-              <div className="budget-copy">
-                Recommended weekly budget: {money(weeklyBudget)}
-              </div>
-              <div className="budget-copy budget-copy--bold">
+              <p className="budget-copy">Recommended weekly budget: {money(weeklyBudget)}</p>
+              <p className="budget-copy budget-copy--bold">
                 {spentWeek <= weeklyBudget
-                  ? `You’re ${money(weeklyBudget - spentWeek)} under your weekly budget.`
-                  : `You’re ${money(spentWeek - weeklyBudget)} over your weekly budget.`}
-              </div>
+                  ? `You're ${money(weeklyBudget - spentWeek)} under your weekly budget.`
+                  : `You're ${money(spentWeek - weeklyBudget)} over your weekly budget.`}
+              </p>
             </>
           )}
-        </div>
+        </section>
 
-        <div className="recommend-card">
-          <h2>What should I eat next?</h2>
-          <div className="meal-row">
-            <div>
-              <span className="meal-label">{MOCK_MEAL.location_name} · sample meal</span>
-              <h3>{MOCK_MEAL.name}</h3>
-              <div className="meal-meta">
-                <span>{MOCK_MEAL.calories} kcal</span>
-                <span>{MOCK_MEAL.protein_g}g protein</span>
-                <span>{MOCK_MEAL.carbs_g}g carbs</span>
-                <span>{MOCK_MEAL.fat_g}g fat</span>
+        {menu.loading && !menu.menu && (
+          <p className="field-helper success" role="status">Loading meal recommendations…</p>
+        )}
+        {recommendations.length > 0 && (
+          <>
+            <section className="recommend-card">
+              <h2>What should I eat next?</h2>
+              <MealCard
+                item={recommendations[0]}
+                saved={saved.isSaved(recommendations[0].id)}
+                onSelect={() => onSelectMeal(recommendations[0])}
+                onToggleSaved={() => void toggleSaved(recommendations[0])}
+              />
+              <div className="meal-actions">
+                <button type="button" className="text-link" onClick={() => onSelectMeal(recommendations[0])}>
+                  View Meal
+                </button>
+                <button
+                  type="button"
+                  className="action-button"
+                  disabled={logging}
+                  onClick={() => void handleAddMeal(recommendations[0])}
+                >
+                  {logging ? "Adding…" : "Add to Today"}
+                </button>
               </div>
-            </div>
-            <button type="button" className="mini-tag">High protein</button>
-          </div>
-          <div className="meal-actions">
-            <button type="button" className="text-link">View Meal</button>
-            <button
-              type="button"
-              className="action-button"
-              onClick={() => void addMeal(MOCK_MEAL)}
-              disabled={logging}
-            >
-              {logging ? "Adding…" : "Add to Today"}
-            </button>
-          </div>
-        </div>
-
-        <BottomNav active="home" onNavigate={onNavigate} onSignOut={() => void handleSignOut()} />
-      </section>
+            </section>
+            <section className="recommend-options">
+              <h2>Best options for you today</h2>
+              {recommendations.map((item) => (
+                <MealCard
+                  key={item.id}
+                  item={item}
+                  saved={saved.isSaved(item.id)}
+                  onSelect={() => onSelectMeal(item)}
+                  onToggleSaved={() => void toggleSaved(item)}
+                />
+              ))}
+            </section>
+          </>
+        )}
+      </main>
+      <BottomNav active="home" onNavigate={onNavigate} />
+      {selectedNutrient && (
+        <NutritionSheet
+          nutrient={selectedNutrient}
+          consumed={data?.today[selectedNutrient] ?? 0}
+          goal={data?.goals?.[selectedNutrient] ?? null}
+          recentLogs={data?.recent_logs ?? []}
+          onClose={() => setSelectedNutrient(null)}
+        />
+      )}
     </div>
   );
 }

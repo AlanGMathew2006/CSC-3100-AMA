@@ -6,6 +6,9 @@ export interface OnboardingInput {
   protein_g: number;
   carbs_g: number;
   fat_g: number;
+  nutrition_priorities?: string[];
+  dietary_restrictions?: string[];
+  preferred_location_ids?: string[];
 }
 
 // ---------- Menu (GET /api/menu) ----------
@@ -28,6 +31,7 @@ export interface MenuItem {
   carbs_g: number | null;
   fat_g: number | null;
   meal_component: "base" | "entree" | null;
+  tags?: string[];
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
 }

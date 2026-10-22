@@ -21,13 +21,15 @@ export function useDashboard() {
     void reload();
   }, [reload]);
 
-  async function addMeal(meal: MealLogInput) {
+  async function addMeal(meal: MealLogInput): Promise<boolean> {
     setLogging(true);
     try {
       await logMeal(meal);
       await reload();
+      return true;
     } catch (err) {
       setError(errorMessage(err));
+      return false;
     } finally {
       setLogging(false);
     }
