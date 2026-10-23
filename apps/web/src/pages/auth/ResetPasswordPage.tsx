@@ -3,7 +3,11 @@ import { useAuth } from "../../auth";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
 import { authErrorMessage } from "../../lib/authErrors";
-import { MIN_PASSWORD_LENGTH, PASSWORD_HINT } from "../../lib/validation";
+import {
+  PASSWORD_HINT,
+  validateNewPassword,
+  type PasswordField,
+} from "../../lib/validation";
 
 type ResetPasswordPageProps = {
   onBackToLogin: () => void;
@@ -14,7 +18,7 @@ export function ResetPasswordPage({ onBackToLogin }: ResetPasswordPageProps) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
-  const [invalidField, setInvalidField] = useState<"password" | "confirm" | null>(null);
+  const [invalidField, setInvalidField] = useState<PasswordField | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
@@ -22,14 +26,10 @@ export function ResetPasswordPage({ onBackToLogin }: ResetPasswordPageProps) {
     setError("");
     setInvalidField(null);
 
-    if (password.length < MIN_PASSWORD_LENGTH) {
-      setInvalidField("password");
-      setError(`Use at least ${MIN_PASSWORD_LENGTH} characters for your password.`);
-      return;
-    }
-    if (password !== confirm) {
-      setInvalidField("confirm");
-      setError("Passwords don't match. Try again.");
+    const issue = validateNewPassword(password, confirm);
+    if (issue) {
+      setInvalidField(issue.field);
+      setError(issue.message);
       return;
     }
 
