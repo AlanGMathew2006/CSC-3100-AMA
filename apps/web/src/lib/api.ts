@@ -36,21 +36,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     }
   };
 
+  const expireSession = async (): Promise<never> => {
+    const { error: signOutError } = await auth.signOut({ scope: "local" });
+    if (signOutError) throw signOutError;
+    throw new Error("Your session expired. Please log in again.");
+  };
+
   let response = await send(token);
   if (response.status === 401) {
     const { data: refreshed, error } = await auth.refreshSession();
     if (error || !refreshed.session) {
-      const { error: signOutError } = await auth.signOut({ scope: "local" });
-      if (signOutError) throw signOutError;
-      throw new Error("Your session expired. Please log in again.");
+      return expireSession();
     }
 
     token = refreshed.session.access_token;
     response = await send(token);
     if (response.status === 401) {
-      const { error: signOutError } = await auth.signOut({ scope: "local" });
-      if (signOutError) throw signOutError;
-      throw new Error("Your session expired. Please log in again.");
+      return expireSession();
     }
   }
 
