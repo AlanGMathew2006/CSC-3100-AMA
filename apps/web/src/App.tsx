@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ComponentProps
+} from "react";
 import "./App.css";
-import type { MenuItem } from "@csc-3100-ama/shared";
 import { useAuth } from "./auth";
 import { BrandHeader } from "./components/BrandHeader";
 import { Toast } from "./components/Toast";
 import type { AppTab } from "./components/BottomNav";
 import { useProfile } from "./hooks/useProfile";
-import { clearConfirmation, isConfirmationPending } from "./lib/emailConfirmation";
 import { EmailConfirmedPage } from "./pages/auth/EmailConfirmedPage";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
@@ -20,6 +23,10 @@ import { ProfilePage } from "./pages/app/ProfilePage";
 import { SavedMealsPage } from "./pages/app/SavedMealsPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
+// The shared package doesn't export a MenuItem type, so
+// derive it from the page component that consumes it.
+type MenuItem = ComponentProps<typeof MealDetailPage>["item"];
+
 type Screen = "welcome" | "login" | "signup";
 
 // Only mounted while signed in, so the profile is fetched per session.
@@ -27,16 +34,23 @@ function SignedInApp() {
   const { profile, loading, error, reload } = useProfile();
   const [tab, setTab] = useState<AppTab>("home");
   const [returnTab, setReturnTab] = useState<AppTab>("home");
-  const [selectedMeal, setSelectedMeal] = useState<MenuItem | null>(null);
+  const [selectedMeal, setSelectedMeal] =
+    useState<MenuItem | null>(null);
   const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
     if (!toastMessage) return;
-    const timer = window.setTimeout(() => setToastMessage(""), 2600);
+    const timer = window.setTimeout(
+      () => setToastMessage(""),
+      2600
+    );
     return () => window.clearTimeout(timer);
   }, [toastMessage]);
 
-  const onToast = useCallback((message: string) => setToastMessage(message), []);
+  const onToast = useCallback(
+    (message: string) => setToastMessage(message),
+    []
+  );
 
   function navigate(nextTab: AppTab) {
     setSelectedMeal(null);
@@ -69,7 +83,10 @@ function SignedInApp() {
         <section className="auth-content">
           <p className="field-helper error" role="alert">
             {error}{" "}
-            <button type="button" className="link-button" onClick={() => void reload()}>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => void reload()}>
               Retry
             </button>
           </p>
@@ -103,7 +120,11 @@ function SignedInApp() {
       onToast={onToast}
     />
   ) : tab === "profile" ? (
-    <ProfilePage profile={profile} onNavigate={navigate} onProfileChanged={() => void reload()} />
+    <ProfilePage
+      profile={profile}
+      onNavigate={navigate}
+      onProfileChanged={() => void reload()}
+    />
   ) : (
     <DashboardPage
       onNavigate={navigate}
@@ -121,9 +142,15 @@ function SignedInApp() {
 }
 
 function App() {
-  const { session, loading, recovering, cancelPasswordRecovery } = useAuth();
+  const {
+    session,
+    loading,
+    recovering,
+    emailConfirmationPending,
+    clearEmailConfirmation,
+    cancelPasswordRecovery
+  } = useAuth();
   const [screen, setScreen] = useState<Screen>("welcome");
-  const [confirmed, setConfirmed] = useState(isConfirmationPending);
 
   if (!isSupabaseConfigured) {
     return (
@@ -131,21 +158,25 @@ function App() {
         <BrandHeader />
         <section className="auth-content">
           <p className="field-helper error" role="alert">
-            Supabase isn't configured. Copy apps/web/.env.example to
-            apps/web/.env.local and fill in your project URL and publishable
-            key.
+            Supabase isn't configured. Copy
+            apps/web/.env.example to apps/web/.env.local and
+            fill in your project URL and publishable key.
           </p>
         </section>
       </div>
     );
   }
 
-  if (confirmed) {
+  if (emailConfirmationPending) {
     return (
       <EmailConfirmedPage
         onContinue={() => {
-          clearConfirmation();
-          setConfirmed(false);
+          window.history.replaceState(
+            null,
+            "",
+            window.location.pathname
+          );
+          clearEmailConfirmation();
           setScreen("login");
         }}
       />
@@ -183,7 +214,9 @@ function App() {
   }
 
   if (screen === "login") {
-    return <LoginPage onCreateAccount={() => setScreen("signup")} />;
+    return (
+      <LoginPage onCreateAccount={() => setScreen("signup")} />
+    );
   }
 
   return <SignupPage onLogin={() => setScreen("login")} />;
