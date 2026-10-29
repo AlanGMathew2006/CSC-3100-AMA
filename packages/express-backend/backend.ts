@@ -16,7 +16,13 @@ interface AuthedRequest extends Request {
 }
 
 const app = express();
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? "http://localhost:5173" }));
+app.use(
+  cors({
+    origin: (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+      .split(",")
+      .map((origin) => origin.trim()),
+  }),
+);
 app.use(express.json());
 
 // Verifies the Supabase access token and attaches a user-scoped client (RLS applies).

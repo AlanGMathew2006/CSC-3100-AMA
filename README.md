@@ -78,14 +78,20 @@ docker build `
   --build-arg VITE_SUPABASE_URL="your-supabase-project-url" `
   --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="your-supabase-publishable-key" `
   -t polyprovision-web .
+```
 
 ### Verify the image was created
 
--Script: `docker images polyprovision-web`
+```powershell
+docker images polyprovision-web
+```
 
 ### Run the Container
--Script: `docker --rm -p 8080:80 --name polyprovision-web polyprovision-web`
 
-# Open app at
-http://localhost:8080
+```powershell
+docker run --rm -p 8080:80 --name polyprovision-web polyprovision-web
 ```
+
+Open the app at:
+
+http://localhost:8080
