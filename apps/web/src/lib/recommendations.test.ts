@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { macroMatch, type MenuItem, type Recommendation } from "@csc-3100-ama/shared";
-import { recommendationAsMenuItem, recommendationLabel } from "./recommendations";
+import {
+  combinedAllergens,
+  recommendationAsMenuItem,
+  recommendationLabel,
+  recommendationLog,
+} from "./recommendations";
 
 // Mock data only.
 const meal = (id: string): MenuItem => ({
@@ -35,8 +40,18 @@ const rec = (overrides: Partial<Recommendation> = {}): Recommendation => ({
 });
 
 describe("recommendationLabel", () => {
-  it("names the combo and its parts, with quantities", () => {
+  it("names the combo and its parts in the order given (main first), with quantities", () => {
     assert.equal(recommendationLabel(rec()), "Plate: Fried Rice + 2× Broccoli Beef");
+  });
+  it("cuts off long titles with +N more", () => {
+    const four = rec({
+      combo: { id: "bp", name: "Bigger Plate", price: 13.3 },
+      items: ["Broccoli Beef", "Orange Chicken", "Kung Pao Chicken", "Chow Mein"].map((name) => ({
+        meal_id: name, name, quantity: 1, unit_price: null, combo_part: "entree" as const, meal_role: "main" as const,
+      })),
+    });
+    assert.equal(recommendationLabel(four, 2), "Bigger Plate: Broccoli Beef + Orange Chicken +2 more");
+    assert.equal(recommendationLabel(four, 4), "Bigger Plate: Broccoli Beef + Orange Chicken + Kung Pao Chicken + Chow Mein");
   });
   it("joins standalone items without a combo", () => {
     assert.equal(
@@ -61,5 +76,46 @@ describe("recommendationAsMenuItem", () => {
   });
   it("returns null when the meal is not in the menu", () => {
     assert.equal(recommendationAsMenuItem(rec(), []), null);
+  });
+});
+
+describe("recommendationLog", () => {
+  it("logs the whole meal at its total price", () => {
+    const log = recommendationLog(rec());
+    assert.equal(log.meal_id, undefined);
+    assert.equal(log.price, 11.3);
+    assert.equal(log.calories, 820);
+    assert.equal(log.name, "Plate: Fried Rice + 2× Broccoli Beef");
+  });
+  it("keeps the meal id for a single standalone item and omits unknown nutrition", () => {
+    const log = recommendationLog(
+      rec({
+        combo: null,
+        items: [{ meal_id: "tuna", name: "Tuna", quantity: 1, unit_price: 8, combo_part: null, meal_role: "main" }],
+        nutrition: { calories: 480, protein_g: null },
+      }),
+    );
+    assert.equal(log.meal_id, "tuna");
+    assert.equal(log.protein_g, undefined);
+  });
+});
+
+describe("combinedAllergens", () => {
+  const withAllergens = (id: string, allergens: string[], verified = true, tags: string[] = []): MenuItem => ({
+    ...meal(id),
+    allergens,
+    allergens_verified: verified,
+    tags,
+  });
+  it("unions verified allergens in the standard order", () => {
+    const result = combinedAllergens(rec(), [
+      withAllergens("rice", ["wheat", "egg"]),
+      withAllergens("beef", ["soy", "wheat"], true, ["contains_pork"]),
+    ]);
+    assert.deepEqual(result, { allergens: ["egg", "wheat", "soy"], containsPork: true, complete: true });
+  });
+  it("is incomplete when any item is unverified or missing", () => {
+    assert.equal(combinedAllergens(rec(), [withAllergens("rice", ["egg"]), withAllergens("beef", [], false)]).complete, false);
+    assert.equal(combinedAllergens(rec(), [withAllergens("rice", ["egg"])]).complete, false);
   });
 });

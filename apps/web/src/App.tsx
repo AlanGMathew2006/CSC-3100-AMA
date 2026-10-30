@@ -15,11 +15,13 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { isSupabaseConfigured } from "./lib/supabase";
+import type { Recommendation } from "@csc-3100-ama/shared";
 import { DashboardPage } from "./pages/app/DashboardPage";
 import { MealDetailPage } from "./pages/app/MealDetailPage";
 import { MenuPage } from "./pages/app/MenuPage";
 import { OnboardingPage } from "./pages/app/OnboardingPage";
 import { ProfilePage } from "./pages/app/ProfilePage";
+import { RecommendationDetailPage } from "./pages/app/RecommendationDetailPage";
 import { SavedMealsPage } from "./pages/app/SavedMealsPage";
 import { WelcomePage } from "./pages/WelcomePage";
 
@@ -36,6 +38,9 @@ function SignedInApp() {
   const [returnTab, setReturnTab] = useState<AppTab>("home");
   const [selectedMeal, setSelectedMeal] =
     useState<MenuItem | null>(null);
+  // A whole recommended meal from the dashboard; its items open in MealDetailPage on top of it.
+  const [selectedRecommendation, setSelectedRecommendation] =
+    useState<Recommendation | null>(null);
   const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
@@ -54,6 +59,7 @@ function SignedInApp() {
 
   function navigate(nextTab: AppTab) {
     setSelectedMeal(null);
+    setSelectedRecommendation(null);
     setTab(nextTab);
   }
 
@@ -107,6 +113,14 @@ function SignedInApp() {
       onNavigate={navigate}
       onToast={onToast}
     />
+  ) : selectedRecommendation && tab === "home" ? (
+    <RecommendationDetailPage
+      rec={selectedRecommendation}
+      onBack={() => setSelectedRecommendation(null)}
+      onSelectMeal={openMeal}
+      onNavigate={navigate}
+      onToast={onToast}
+    />
   ) : tab === "explore" ? (
     <MenuPage
       onNavigate={navigate}
@@ -129,6 +143,7 @@ function SignedInApp() {
     <DashboardPage
       onNavigate={navigate}
       onSelectMeal={openMeal}
+      onSelectRecommendation={setSelectedRecommendation}
       onToast={onToast}
     />
   );

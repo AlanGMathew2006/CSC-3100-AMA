@@ -27,6 +27,7 @@ export function MealCard({
   saved,
   showOpenStatus = false,
   macroScore,
+  hideBookmark = false,
   onSelect,
   onToggleSaved,
 }: {
@@ -37,6 +38,8 @@ export function MealCard({
   showOpenStatus?: boolean;
   // Macro Match against the next meal's targets; omit to hide, null shows "unavailable".
   macroScore?: number | null;
+  // For multi-item recommendations, where saving one item would be misleading.
+  hideBookmark?: boolean;
   onSelect: () => void;
   onToggleSaved: () => void;
 }) {
@@ -80,6 +83,7 @@ export function MealCard({
           </span>
         </span>
       </button>
+      {!hideBookmark && (
       <button
         type="button"
         className={`bookmark-button${saved ? " bookmark-button--saved" : ""}`}
@@ -100,6 +104,7 @@ export function MealCard({
           aria-hidden="true"
         />
       </button>
+      )}
     </article>
   );
 }

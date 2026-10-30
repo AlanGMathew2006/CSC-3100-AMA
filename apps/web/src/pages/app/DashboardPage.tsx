@@ -11,7 +11,11 @@ import { useRecommendations } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
-import { NO_RECOMMENDATION_MESSAGES, recommendationAsMenuItem } from "../../lib/recommendations";
+import {
+  NO_RECOMMENDATION_MESSAGES,
+  recommendationAsMenuItem,
+  recommendationLog,
+} from "../../lib/recommendations";
 import type { UserPreferences } from "../../types/dashboard";
 import { NutritionSheet } from "./NutritionSheet";
 
@@ -29,16 +33,19 @@ function greeting(): string {
 export function DashboardPage({
   onNavigate,
   onSelectMeal,
+  onSelectRecommendation,
   onToast,
 }: {
   onNavigate: (tab: AppTab) => void;
   onSelectMeal: (item: MenuItem) => void;
+  onSelectRecommendation: (rec: Recommendation) => void;
   onToast: (message: string) => void;
 }) {
   const { user } = useAuth();
   const { data, error, logging, reload, addMeal } = useDashboard();
   const menu = useMenu();
-  const recs = useRecommendations({ limit: 3 });
+  // The hero pick plus up to 3 more for "Best options".
+  const recs = useRecommendations({ limit: 4 });
   const saved = useSavedMeals();
   const [view, setView] = useState<"daily" | "weekly">("daily");
   const [selectedNutrient, setSelectedNutrient] = useState<NutrientKey | null>(null);
@@ -84,18 +91,21 @@ export function DashboardPage({
     "Student";
 
   // Ranked by the optimizer (GET /api/recommendations); each is shown through the existing MealCard.
-  // `item` is the whole recommendation for display; `meal` is its first real menu item, which is
-  // what details and saving use, so allergen info always matches the meal shown.
+  // `item` is the whole recommendation for display. A single-item recommendation opens and saves
+  // that meal; a multi-item one opens the recommendation view and has no bookmark.
   const recommendations = useMemo(
     () =>
       (recs.data?.recommendations ?? []).flatMap((rec) => {
         const items = menu.menu?.items ?? [];
         const item = recommendationAsMenuItem(rec, items);
         const meal = item && items.find((candidate) => candidate.id === item.id);
-        return item && meal ? [{ rec, item, meal }] : [];
+        const single = !rec.combo && rec.items.length === 1;
+        return item && meal ? [{ rec, item, meal, single }] : [];
       }),
     [recs.data, menu.menu],
   );
+  const openRecommendation = ({ rec, meal, single }: (typeof recommendations)[number]) =>
+    single ? onSelectMeal(meal) : onSelectRecommendation(rec);
   const weeklyDays = useMemo(() => {
     const today = new Date();
     const mondayOffset = (today.getDay() + 6) % 7;
@@ -122,20 +132,8 @@ export function DashboardPage({
     1,
   );
 
-  async function handleAddMeal({ rec, item }: { rec: Recommendation; item: MenuItem }) {
-    const single = !rec.combo && rec.items.length === 1;
-    const succeeded = await addMeal({
-      meal_id: single ? item.id : undefined,
-      location_id: rec.location.id,
-      name: item.name,
-      location_name: rec.location.name,
-      price: rec.total_price,
-      calories: rec.nutrition.calories ?? undefined,
-      protein_g: rec.nutrition.protein_g ?? undefined,
-      carbs_g: rec.nutrition.carbs_g ?? undefined,
-      fat_g: rec.nutrition.fat_g ?? undefined,
-    });
-    if (succeeded) {
+  async function handleAddMeal({ rec }: { rec: Recommendation }) {
+    if (await addMeal(recommendationLog(rec))) {
       onToast("Meal added to today");
       void recs.reload();
     }
@@ -318,13 +316,14 @@ export function DashboardPage({
               <MealCard
                 item={recommendations[0].item}
                 saved={saved.isSaved(recommendations[0].item.id)}
-                onSelect={() => onSelectMeal(recommendations[0].meal)}
+                hideBookmark={!recommendations[0].single}
+                onSelect={() => openRecommendation(recommendations[0])}
                 onToggleSaved={() => void toggleSaved(recommendations[0].meal)}
               />
               <p className="recommend-explanation">{recommendations[0].rec.explanation}</p>
               <MacroMatchSummary match={recommendations[0].rec.macro_match} />
               <div className="meal-actions">
-                <button type="button" className="text-link" onClick={() => onSelectMeal(recommendations[0].meal)}>
+                <button type="button" className="text-link" onClick={() => openRecommendation(recommendations[0])}>
                   View Meal
                 </button>
                 <button
@@ -337,22 +336,26 @@ export function DashboardPage({
                 </button>
               </div>
             </section>
+            {recommendations.length > 1 && (
             <section className="recommend-options">
               <h2>Best options for you today</h2>
-              {recommendations.map(({ rec, item, meal }) => (
-                <div key={rec.location.id}>
+              {/* The hero pick is shown above, so this lists the next best options. */}
+              {recommendations.slice(1).map((entry) => (
+                <div key={entry.rec.location.id}>
                   <MealCard
-                    item={item}
-                    saved={saved.isSaved(item.id)}
-                    onSelect={() => onSelectMeal(meal)}
-                    onToggleSaved={() => void toggleSaved(meal)}
+                    item={entry.item}
+                    saved={saved.isSaved(entry.item.id)}
+                    hideBookmark={!entry.single}
+                    onSelect={() => openRecommendation(entry)}
+                    onToggleSaved={() => void toggleSaved(entry.meal)}
                   />
                   <p className="recommend-explanation">
-                    {macroScoreText(rec.macro_match.score)} · {rec.explanation}
+                    {macroScoreText(entry.rec.macro_match.score)} · {entry.rec.explanation}
                   </p>
                 </div>
               ))}
             </section>
+            )}
           </>
         )}
       </main>

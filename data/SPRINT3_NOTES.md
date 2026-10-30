@@ -108,6 +108,14 @@ Run the migration in the Supabase SQL editor before deploying this backend: GET 
 - Item serving windows (`data/serving_windows.json`): breakfast items only show with "Open now" and
   only get recommended during breakfast (Chick-fil-A until 10:30, chain-wide time; Subway unknown).
   New migration `20261031000000_item_serving_windows.sql`, which runs after 20261030000000.
+- Meal roles (`data/meal_roles.json`, migration `20261101000000_meal_roles.sql`): every item is a main,
+  side, drink, dessert or sauce. Each recommendation has 1-2 mains (a combo counts as one), at most one
+  side and one drink, and never desserts or sauces. The import fails if any meal has no role.
+- Recommendation detail view: tapping a multi-item recommendation shows the whole meal (items,
+  quantities, prices, per-item nutrition and serving times, totals vs targets with Macro Match,
+  combined allergens, Add to Today). Tapping an item opens its own details. "Best options" no longer
+  repeats the hero pick, and multi-item cards have no bookmark.
+- The explanation line leads with the macro the user's priorities care about.
 
 ## Notes
 - Deterministic: inputs sorted by id; ties by objective, then cost, then location name.
@@ -232,6 +240,80 @@ Decisions made on this fix:
 - The label says "Breakfast" when the category or combo description says breakfast, otherwise
   "Limited hours". The time comes from the window, e.g. "Breakfast · until 10:30 am".
 
+## Follow-up: recommendation detail view and meal roles
+
+Commits "Constrain recommendations by meal role" and "Add recommendation detail view" on
+sprint3/macro-match.
+
+**Bug 2: meals made of desserts and drinks.**
+- **New migration:** `packages/express-backend/supabase/migrations/20261101000000_meal_roles.sql` adds
+  `meals.meal_role` (main / side / drink / dessert / sauce). It runs **after**
+  `20261031000000_item_serving_windows.sql`.
+- **Re-import afterwards.** Until the import sets roles, no meal counts as a main, so the dashboard
+  shows no recommendations.
+- **Role rules** are in `data/meal_roles.json`: restaurant + category rules plus overrides by source_id.
+  - **Chick-fil-A:** Entrees and Breakfast are main, except Hash Brown, the two parfaits, Buttered
+    Biscuit, English Muffin and Mini Yeast Rolls, which are side. Sides are side, Drinks are drink,
+    Desserts are dessert (Frosted Coffee, shakes, Float, Frosted Soda, cookies), Dipping Sauces are
+    sauce.
+  - **Subway:** subs, Fresh Fit and Breakfast are main, Soups are side, Cookies are dessert.
+  - **Taco Bell:** Tacos, Burritos, Chalupas and Specialties are main, Nachos & Sides is side, Sauces
+    are sauce.
+  - **Panda Express:** Appetizers are side. In More, Apple Pie Roll and Fortune Cookie are dessert and
+    the rest are sauce.
+- **The import fails** if any meal has no role, or if the roles file has a problem.
+- **Optimizer per location:**
+  - mains + combos: 1 to 2
+  - sides: at most 1
+  - drinks: at most 1
+  - desserts and sauces: never
+  - quantity: up to 2 of the same main, 1 of anything else
+  - total: at most 4 items
+- **Items are listed main first.** For a combo, that's the entrées, then the base, then sides and
+  drinks.
+- **The explanation leads with your priority:**
+  - "High protein" → protein
+  - "Lower calorie" → calories
+  - both → "Covers X% of your remaining protein with Y% of your remaining calories"
+  - "Balanced" → the overall Macro Match
+  - none → protein
+
+**Bug 1: "View Meal" showed one item.**
+- **New page:** `apps/web/src/pages/app/RecommendationDetailPage.tsx` (MealDetailPage's styles). It
+  shows the location, total price and combo, then every item with its quantity, price ("in combo" for
+  combo parts), calories/protein/carbs/fat and serving-time label. Below that are the totals vs
+  targets with the Macro Match breakdown, the explanation line, combined allergens ("Allergen info
+  incomplete" if any item is unverified), and Add to Today, which logs the whole meal. Tapping an item
+  opens MealDetailPage; Back returns to the recommendation.
+- **Cards:** titles are main first and cut off with "+N more". Multi-item cards have no bookmark (a new
+  optional `hideBookmark` prop on MealCard). A single-item recommendation still opens and saves that
+  item directly.
+- **"Best options for you today"** now leaves out the hero pick. The dashboard asks for 4 results, so up
+  to 3 more show.
+
+Decisions made on this fix:
+- **Panda Bases/Entrees are `main`.** They're only used inside a Bowl/Plate, which counts as the main.
+  Your mapping didn't list them, and every row needs a role.
+- **Taco Bell "Cinnamon Twists" is `dessert`,** not side. It's a sweet snack listed under Nachos &
+  Sides. It's unpriced, so it can't be recommended either way.
+- **Fruit Cup** is already in Sides in the CSV, so it needs no role override.
+- **Meals without a role** (for example before the import runs) are never recommended.
+- **The combined allergen list** on the recommendation page is labeled "Contains at least:" when info
+  is incomplete. The unverified items' allergens are unknown, so the list may be missing some.
+
+Sample run on the real data (2000 cal / 150 g protein / 200 g carbs / 65 g fat, no meals logged,
+2 meals left, $25, Wednesday 13:00). Per-meal targets were 1000 cal / 75 g protein / 100 g carbs /
+32.5 g fat:
+
+1. **Chick-fil-A (1901 Marketplace), $22.66, Macro Match 98:** Deluxe Sandwich + Grilled Nuggets
+   (8 ct) + Berry Parfait with Cookie Crumbs + 1% Chocolate Milk.
+2. **Subway (Poly Canyon Village), $21.57, Macro Match 93:** Honey Mustard Chicken + Sweet Onion
+   Chicken Teriyaki + Chicken Noodle Soup.
+3. **Subway (Kennedy Library), $17.98, Macro Match 92:** Chipotle Philly + Sweet Onion Chicken
+   Teriyaki.
+
+Taco Bell was skipped (closed until 16:00).
+
 ## 3. Remaining manual steps
 
 1. **Supabase SQL editor**, in this order:
@@ -239,8 +321,11 @@ Decisions made on this fix:
       (before deploying the allergen branch's backend).
    2. `packages/express-backend/supabase/migrations/20261031000000_item_serving_windows.sql`
       (before deploying sprint3/macro-match; GET /api/menu selects `serving_windows`).
+   3. `packages/express-backend/supabase/migrations/20261101000000_meal_roles.sql`
+      (before deploying sprint3/macro-match; GET /api/menu selects `meal_role`).
 2. **Re-import** from `packages/express-backend`: `npm run import:menu -- --dry-run`, then
-   `npm run import:menu`. This loads hours, allergens, tags and serving windows.
+   `npm run import:menu`. This loads hours, allergens, tags, serving windows and meal roles.
+   Recommendations stay empty until this runs.
 3. **data/DATA_TODO.md**:
    - 36 prices to look up in Grubhub (11 Panda bases/entrees are combo-only and need nothing).
    - 159 unverified allergen rows (all of Taco Bell, Subway and Panda, plus 45 Chick-fil-A items).
