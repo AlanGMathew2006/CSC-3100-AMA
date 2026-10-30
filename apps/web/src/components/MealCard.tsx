@@ -1,4 +1,4 @@
-import type { MenuItem } from "@csc-3100-ama/shared";
+import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
 
 export const cheapestOffering = (item: MenuItem) =>
   item.offerings.reduce<(typeof item.offerings)[number] | null>(
@@ -10,14 +10,27 @@ export const cheapestOffering = (item: MenuItem) =>
 export const mealPrice = (item: MenuItem): number | null =>
   cheapestOffering(item)?.price ?? null;
 
+const OPEN_LABELS: Record<OpenStatus, string> = {
+  open: "Open",
+  closed: "Closed",
+  unknown: "Hours unavailable",
+};
+
+export function OpenBadge({ status }: { status: OpenStatus }) {
+  return <span className={`open-badge open-badge--${status}`}>{OPEN_LABELS[status]}</span>;
+}
+
 export function MealCard({
   item,
   saved,
+  showOpenStatus = false,
   onSelect,
   onToggleSaved,
 }: {
   item: MenuItem;
   saved: boolean;
+  // Shows whether the location of the listed (cheapest) offering is open now.
+  showOpenStatus?: boolean;
   onSelect: () => void;
   onToggleSaved: () => void;
 }) {
@@ -31,6 +44,7 @@ export function MealCard({
           <span className="meal-label">
             {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
           </span>
+          {showOpenStatus && offering && <OpenBadge status={offering.open_status} />}
           <strong>{item.name}</strong>
         </span>
         <span className="meal-card-price">

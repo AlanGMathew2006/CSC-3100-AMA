@@ -1,0 +1,241 @@
+{
+  "_comment": "Hours per dining_locations.name, loaded by npm run import:menu. Times are America/Los_Angeles, 24-hour HH:MM. When hours are known, list all seven days (mon..sun); use [] for a closed day. A close at or before the open time runs past midnight. Regular-week hours from Dine On Campus 'Hours This Week' (Oct 25-31, 2026); breaks and holidays differ. hours: null means not yet verified (shown as 'Hours unavailable'). See DATA_TODO.md.",
+  "timezone": "America/Los_Angeles",
+  "locations": [
+    {
+      "name": "Chick-fil-A (1901 Marketplace)",
+      "hours": {
+        "sun": [],
+        "mon": [
+          {
+            "open": "07:00",
+            "close": "21:00"
+          }
+        ],
+        "tue": [
+          {
+            "open": "07:00",
+            "close": "21:00"
+          }
+        ],
+        "wed": [
+          {
+            "open": "07:00",
+            "close": "21:00"
+          }
+        ],
+        "thu": [
+          {
+            "open": "07:00",
+            "close": "21:00"
+          }
+        ],
+        "fri": [
+          {
+            "open": "07:00",
+            "close": "21:00"
+          }
+        ],
+        "sat": [
+          {
+            "open": "11:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "source": "https://dineoncampus.com/calpoly/locations/chick-fil-a",
+      "collected_on": "2026-10-30"
+    },
+    {
+      "name": "Panda Express (1901 Marketplace)",
+      "hours": {
+        "sun": [
+          {
+            "open": "11:00",
+            "close": "21:00"
+          }
+        ],
+        "mon": [
+          {
+            "open": "10:30",
+            "close": "21:00"
+          }
+        ],
+        "tue": [
+          {
+            "open": "10:30",
+            "close": "21:00"
+          }
+        ],
+        "wed": [
+          {
+            "open": "10:30",
+            "close": "21:00"
+          }
+        ],
+        "thu": [
+          {
+            "open": "10:30",
+            "close": "21:00"
+          }
+        ],
+        "fri": [
+          {
+            "open": "10:30",
+            "close": "21:00"
+          }
+        ],
+        "sat": []
+      },
+      "source": "https://dineoncampus.com/calpoly/locations/panda-express",
+      "collected_on": "2026-10-30"
+    },
+    {
+      "name": "Subway (Kennedy Library)",
+      "hours": {
+        "sun": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "mon": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "tue": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "wed": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "thu": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "fri": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ],
+        "sat": [
+          {
+            "open": "07:00",
+            "close": "02:00"
+          }
+        ]
+      },
+      "source": "https://dineoncampus.com/calpoly/locations/subway-at-kennedy-library",
+      "collected_on": "2026-10-30"
+    },
+    {
+      "name": "Subway (Poly Canyon Village)",
+      "hours": {
+        "sun": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "mon": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "tue": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "wed": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "thu": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "fri": [
+          {
+            "open": "09:00",
+            "close": "22:00"
+          }
+        ],
+        "sat": [
+          {
+            "open": "09:00",
+            "close": "00:00"
+          }
+        ]
+      },
+      "source": "https://dineoncampus.com/calpoly/locations/subway-at-pcv",
+      "collected_on": "2026-10-30"
+    },
+    {
+      "name": "Taco Bell (Poly Canyon Village)",
+      "hours": {
+        "sun": [
+          {
+            "open": "16:00",
+            "close": "21:00"
+          }
+        ],
+        "mon": [
+          {
+            "open": "16:00",
+            "close": "23:00"
+          }
+        ],
+        "tue": [
+          {
+            "open": "16:00",
+            "close": "23:00"
+          }
+        ],
+        "wed": [
+          {
+            "open": "16:00",
+            "close": "23:00"
+          }
+        ],
+        "thu": [
+          {
+            "open": "16:00",
+            "close": "23:00"
+          }
+        ],
+        "fri": [
+          {
+            "open": "16:00",
+            "close": "23:00"
+          }
+        ],
+        "sat": [
+          {
+            "open": "16:00",
+            "close": "21:00"
+          }
+        ]
+      },
+      "source": "https://dineoncampus.com/calpoly/locations/taco-bell",
+      "collected_on": "2026-10-30"
+    }
+  ]
+}

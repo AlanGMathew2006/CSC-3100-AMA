@@ -161,6 +161,10 @@ alter table public.meals add column if not exists nutrition_source text;
 alter table public.meals add column if not exists notes text;
 create unique index if not exists meals_source_id_key on public.meals (source_id);
 
+-- ============ Meals: allergen verification (Sprint 3, see migrations/20261030000000_meal_allergens_verified.sql) ============
+alter table public.meals add column if not exists allergens_verified boolean not null default false;
+alter table public.meals add column if not exists allergen_source text;
+
 -- ============ Menu offerings: where the price came from ============
 alter table public.menu_offerings add column if not exists price_source text;
 

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
+import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
@@ -176,6 +177,9 @@ export function ProfilePage({
                   </button>
                 ))}
               </div>
+              {preferences.dietary_restrictions.includes("Halal-friendly") && (
+                <p className="field-helper">{HALAL_FRIENDLY_NOTE}</p>
+              )}
             </fieldset>
 
             <section className="profile-setting-section">

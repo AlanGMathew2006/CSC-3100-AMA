@@ -1,4 +1,5 @@
 import type { MenuItem } from "@csc-3100-ama/shared";
+import { allergenLabel } from "../../lib/allergens";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
@@ -119,6 +120,25 @@ export function MealDetailPage({
             <p><span aria-hidden="true">✓</span> Nutrition information is shown so you can compare this meal with your daily goals.</p>
             <p><span aria-hidden="true">✓</span> {price == null ? "Price is not currently available." : `Priced at $${price.toFixed(2)} at ${offering?.location_name ?? item.restaurant}.`}</p>
             {item.serving && <p><span aria-hidden="true">✓</span> Serving: {item.serving}</p>}
+          </section>
+
+          <section className="goal-fit-card" aria-labelledby="allergen-heading">
+            <h2 id="allergen-heading">Allergens</h2>
+            {item.allergens_verified ? (
+              <>
+                <p>
+                  {item.allergens?.length
+                    ? `Contains: ${item.allergens.map(allergenLabel).join(", ")}`
+                    : "No major allergens listed by the restaurant."}
+                </p>
+                {item.tags?.includes("contains_pork") && <p>Contains pork</p>}
+                <p className="field-helper">
+                  From the restaurant&apos;s published allergen info. Shared kitchens may cause cross-contact.
+                </p>
+              </>
+            ) : (
+              <p>Allergen info unavailable</p>
+            )}
           </section>
 
           <div className="detail-actions">

@@ -1,4 +1,9 @@
 // Shared utilities and types used across apps/packages.
+import type { OpenStatus } from "./hours.js";
+
+export * from "./dietary.js";
+export * from "./hours.js";
+
 export interface OnboardingInput {
   dining_dollars_balance: number;
   daily_spending_target: number;
@@ -18,6 +23,8 @@ export interface MenuOffering {
   campus_area: string | null;
   price: number;
   service_date: string;
+  // From the location's hours at request time; "unknown" when hours have not been collected.
+  open_status: OpenStatus;
 }
 
 export interface MenuItem {
@@ -32,6 +39,9 @@ export interface MenuItem {
   fat_g: number | null;
   meal_component: "base" | "entree" | null;
   tags?: string[];
+  // Only meaningful when allergens_verified is true; otherwise show "Allergen info unavailable".
+  allergens?: string[];
+  allergens_verified?: boolean;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
 }

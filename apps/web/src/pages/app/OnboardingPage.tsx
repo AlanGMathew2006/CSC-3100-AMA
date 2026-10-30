@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
 import { completeOnboarding, fetchLocations } from "../../lib/api";
@@ -162,6 +163,9 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
                 ),
               )}
             </div>
+            {dietaryRestrictions.includes("Halal-friendly") && (
+              <p className="field-helper">{HALAL_FRIENDLY_NOTE}</p>
+            )}
           </fieldset>
 
           <fieldset className="choice-group">

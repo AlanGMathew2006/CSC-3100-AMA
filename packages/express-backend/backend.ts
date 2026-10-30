@@ -212,7 +212,13 @@ app.put(
 
 app.get("/api/locations", handle((req) => svc.listLocations(req.db)));
 // Full imported campus menu: every item with its latest price per location, plus combos.
-app.get("/api/menu", handle((req) => menu.getMenu(req.db)));
+// ?open_now=true drops offerings at closed locations (unknown hours stay, with open_status "unknown").
+app.get(
+  "/api/menu",
+  handle((req) =>
+    menu.getMenu(req.db, { openNow: queryString(req.query.open_now) === "true" }),
+  ),
+);
 app.get(
   "/api/menu-offerings",
   handle((req) =>

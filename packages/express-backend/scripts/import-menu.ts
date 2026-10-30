@@ -1,23 +1,25 @@
-// Imports the collected campus menu (data/menu_items.csv, data/menu_combos.csv) into Supabase.
+// Imports the collected campus menu (data/menu_items.csv, data/menu_combos.csv) and
+// location hours (data/dining_hours.json) into Supabase.
 //
 //   npm run import:menu -- --dry-run   # check the CSVs and print what would be written
 //   npm run import:menu                # write to Supabase (needs SUPABASE_SERVICE_ROLE_KEY in .env)
 //
 // Safe to re-run: every write is an upsert on a stable key, so nothing is duplicated.
-// Pass --data-dir <path> to read the CSVs from somewhere other than the repo's data/ folder.
+// Pass --data-dir <path> to read the data files from somewhere other than the repo's data/ folder.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildImportPlan,
   parseCsv,
   toComboRecords,
+  toHoursRecords,
   toItemRecords,
   type ImportPlan,
   type Problem
 } from "./menu-import/pipeline.js";
+import { load } from "./menu-import/load.js";
 
 const args = process.argv.slice(2);
 const dryRun = args.includes("--dry-run");
@@ -37,90 +39,31 @@ function reportProblems(label: string, problems: Problem[]) {
 }
 
 function summarize(plan: ImportPlan) {
-  console.log(`  dining_locations: ${plan.locations.length}`);
-  for (const location of plan.locations)
-    console.log(`    - ${location.name}`);
+  console.log(
+    `  dining_locations: ${plan.locations.length} (${plan.locationsWithoutHours.length} without verified hours)`
+  );
+  for (const location of plan.locations) {
+    const hours = Object.keys(location.hours).length
+      ? "hours set"
+      : "hours unknown";
+    console.log(`    - ${location.name} (${hours})`);
+  }
   console.log(
     `  meals:            ${plan.meals.length} (${plan.unpricedMeals} without a standalone price)`
+  );
+  console.log(
+    `                    ${plan.meals.filter((meal) => meal.allergens_verified).length} with verified allergens`
   );
   console.log(`  menu_offerings:   ${plan.offerings.length}`);
   console.log(`  menu_combos:      ${plan.combos.length}`);
 }
 
-function check<T>(
-  {
-    data,
-    error
-  }: { data: T; error: { message: string } | null },
-  step: string
-): T {
-  if (error)
-    throw new Error(`${step} failed: ${error.message}`);
-  return data;
-}
-
-async function load(db: SupabaseClient, plan: ImportPlan) {
-  const locations = check(
-    await db
-      .from("dining_locations")
-      .upsert(plan.locations, { onConflict: "name" })
-      .select("id, name"),
-    "Upserting dining_locations"
-  ) as { id: string; name: string }[];
-  const locationIds = new Map(
-    locations.map((row) => [row.name, row.id])
-  );
-
-  const meals = check(
-    await db
-      .from("meals")
-      .upsert(plan.meals, { onConflict: "source_id" })
-      .select("id, source_id"),
-    "Upserting meals"
-  ) as { id: string; source_id: string }[];
-  const mealIds = new Map(
-    meals.map((row) => [row.source_id, row.id])
-  );
-
-  const offerings = plan.offerings.map(
-    ({ meal_source_id, location_name, ...rest }) => {
-      const meal_id = mealIds.get(meal_source_id);
-      const location_id = locationIds.get(location_name);
-      if (!meal_id || !location_id) {
-        throw new Error(
-          `Missing id for offering ${meal_source_id} at ${location_name}`
-        );
-      }
-      return {
-        ...rest,
-        meal_id,
-        location_id,
-        last_synced_at: new Date().toISOString()
-      };
-    }
-  );
-  check(
-    await db
-      .from("menu_offerings")
-      .upsert(offerings, {
-        onConflict: "meal_id,location_id,service_date"
-      }),
-    "Upserting menu_offerings"
-  );
-
-  check(
-    await db
-      .from("menu_combos")
-      .upsert(plan.combos, { onConflict: "source_id" }),
-    "Upserting menu_combos"
-  );
-}
-
 async function main() {
-  console.log(`Reading menu CSVs from ${dataDir}`);
-  const [itemsCsv, combosCsv] = await Promise.all([
+  console.log(`Reading menu data from ${dataDir}`);
+  const [itemsCsv, combosCsv, hoursJson] = await Promise.all([
     readFile(path.join(dataDir, "menu_items.csv"), "utf8"),
-    readFile(path.join(dataDir, "menu_combos.csv"), "utf8")
+    readFile(path.join(dataDir, "menu_combos.csv"), "utf8"),
+    readFile(path.join(dataDir, "dining_hours.json"), "utf8")
   ]);
 
   const { items, problems: itemProblems } = toItemRecords(
@@ -129,10 +72,18 @@ async function main() {
   const { combos, problems: comboProblems } = toComboRecords(
     parseCsv(combosCsv)
   );
+  const { hours, problems: hoursProblems } = toHoursRecords(
+    JSON.parse(hoursJson)
+  );
   reportProblems("menu_items.csv", itemProblems);
   reportProblems("menu_combos.csv", comboProblems);
+  reportProblems("dining_hours.json", hoursProblems);
 
-  const plan = buildImportPlan(items, combos);
+  const plan = buildImportPlan(items, combos, hours);
+  for (const name of plan.unmatchedHours)
+    console.warn(
+      `  dining_hours.json has "${name}", which matches no location in menu_items.csv`
+    );
   console.log(
     dryRun
       ? "Dry run, nothing written. Would upsert:"
