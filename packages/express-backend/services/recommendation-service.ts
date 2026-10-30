@@ -6,6 +6,7 @@ import {
   isMealAllowed,
   macroMatch,
   MACROS,
+  servingWindowStatus,
   startOfDiningDay,
   type DietaryPreferences,
   type Macro,
@@ -536,7 +537,14 @@ export async function recommend(
   if (candidates.length === 0)
     return empty("no_eligible_locations", skipped);
 
-  const allowed = data.menu.items.filter((item) => isMealAllowed(item, prefs));
+  // Only items being served right now: a breakfast item after its window, or one whose serving
+  // time is unknown (e.g. Subway breakfast), is never recommended. Locations here are already open
+  // (or have unknown hours, see above), so the item's own window decides.
+  const servedNow = (windows: MenuItem["serving_windows"]) =>
+    servingWindowStatus(windows, options.at) === "open";
+  const allowed = data.menu.items.filter(
+    (item) => isMealAllowed(item, prefs) && servedNow(item.serving_windows)
+  );
   const recommendations: Recommendation[] = [];
 
   for (const location of candidates) {
@@ -558,7 +566,12 @@ export async function recommend(
         : [];
     });
     const combos: ComboOption[] = data.menu.combos
-      .filter((c) => c.restaurant === location.restaurant && isBuildYourOwnCombo(c))
+      .filter(
+        (c) =>
+          c.restaurant === location.restaurant &&
+          isBuildYourOwnCombo(c) &&
+          servedNow(c.serving_windows)
+      )
       .map((c) => ({
         id: c.id,
         name: c.name,

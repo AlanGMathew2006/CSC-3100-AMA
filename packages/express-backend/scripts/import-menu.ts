@@ -1,5 +1,5 @@
 // Imports the collected campus menu (data/menu_items.csv, data/menu_combos.csv) and
-// location hours (data/dining_hours.json) into Supabase.
+// location hours (data/dining_hours.json) and item serving windows (data/serving_windows.json) into Supabase.
 //
 //   npm run import:menu -- --dry-run   # check the CSVs and print what would be written
 //   npm run import:menu                # write to Supabase (needs SUPABASE_SERVICE_ROLE_KEY in .env)
@@ -11,11 +11,13 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  applyServingWindows,
   buildImportPlan,
   parseCsv,
   toComboRecords,
   toHoursRecords,
   toItemRecords,
+  toServingWindowRules,
   type ImportPlan,
   type Problem
 } from "./menu-import/pipeline.js";
@@ -54,16 +56,24 @@ function summarize(plan: ImportPlan) {
   console.log(
     `                    ${plan.meals.filter((meal) => meal.allergens_verified).length} with verified allergens`
   );
+  const windowed = (rows: { serving_windows: unknown }[]) =>
+    rows.filter((row) => row.serving_windows !== null).length;
+  console.log(
+    `                    ${windowed(plan.meals)} with a serving window (${plan.meals.filter((m) => m.serving_windows === "unknown").length} unknown)`
+  );
   console.log(`  menu_offerings:   ${plan.offerings.length}`);
-  console.log(`  menu_combos:      ${plan.combos.length}`);
+  console.log(
+    `  menu_combos:      ${plan.combos.length} (${windowed(plan.combos)} with a serving window)`
+  );
 }
 
 async function main() {
   console.log(`Reading menu data from ${dataDir}`);
-  const [itemsCsv, combosCsv, hoursJson] = await Promise.all([
+  const [itemsCsv, combosCsv, hoursJson, windowsJson] = await Promise.all([
     readFile(path.join(dataDir, "menu_items.csv"), "utf8"),
     readFile(path.join(dataDir, "menu_combos.csv"), "utf8"),
-    readFile(path.join(dataDir, "dining_hours.json"), "utf8")
+    readFile(path.join(dataDir, "dining_hours.json"), "utf8"),
+    readFile(path.join(dataDir, "serving_windows.json"), "utf8")
   ]);
 
   const { items, problems: itemProblems } = toItemRecords(
@@ -77,9 +87,17 @@ async function main() {
   );
   reportProblems("menu_items.csv", itemProblems);
   reportProblems("menu_combos.csv", comboProblems);
+  const { rules: windowRules, problems: windowProblems } =
+    toServingWindowRules(JSON.parse(windowsJson));
   reportProblems("dining_hours.json", hoursProblems);
+  reportProblems("serving_windows.json", windowProblems);
 
-  const plan = buildImportPlan(items, combos, hours);
+  const { plan, unmatched } = applyServingWindows(
+    buildImportPlan(items, combos, hours),
+    windowRules
+  );
+  for (const name of unmatched)
+    console.warn(`  serving_windows.json ${name} matched no rows`);
   for (const name of plan.unmatchedHours)
     console.warn(
       `  dining_hours.json has "${name}", which matches no location in menu_items.csv`

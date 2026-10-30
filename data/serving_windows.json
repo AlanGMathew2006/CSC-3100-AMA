@@ -1,0 +1,138 @@
+{
+  "_comment": "When specific menu items are served, loaded by npm run import:menu into meals.serving_windows and menu_combos.serving_windows. Same per-day format as dining_hours.json (America/Los_Angeles, all seven days, [] = not served that day), or \"unknown\". Items with no matching rule are served whenever the location is open. An item is available only when its location is open AND its window is open. Precedence: overrides (by source_id) > rules.",
+  "timezone": "America/Los_Angeles",
+  "meal_rules": [
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Breakfast",
+      "label": "Breakfast",
+      "windows": {
+        "sun": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "mon": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "tue": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "wed": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "thu": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "fri": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "sat": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ]
+      },
+      "source": "https://www.chick-fil-a.com/customer-support/our-food/our-menu/what-time-does-chick-fil-a-stop-serving-breakfast (chain-wide 'until 10:30 a.m.'; not confirmed for the Cal Poly location, whose Dine On Campus menu lists no breakfast times), viewed 2026-10-30",
+      "verified": "Chain-wide time from chick-fil-a.com; not campus-confirmed"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Breakfast",
+      "label": "Breakfast",
+      "windows": "unknown",
+      "source": null,
+      "verified": "Not verified: breakfast cutoff varies by franchise and neither campus Subway lists one (see DATA_TODO.md)"
+    }
+  ],
+  "combo_rules": [
+    {
+      "restaurant": "Chick-fil-A",
+      "description_prefix": "Breakfast meal",
+      "label": "Breakfast",
+      "windows": {
+        "sun": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "mon": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "tue": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "wed": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "thu": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "fri": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ],
+        "sat": [
+          {
+            "open": "00:00",
+            "close": "10:30"
+          }
+        ]
+      },
+      "source": "https://www.chick-fil-a.com/customer-support/our-food/our-menu/what-time-does-chick-fil-a-stop-serving-breakfast (chain-wide 'until 10:30 a.m.'; not confirmed for the Cal Poly location, whose Dine On Campus menu lists no breakfast times), viewed 2026-10-30",
+      "verified": "Chain-wide time from chick-fil-a.com; not campus-confirmed"
+    }
+  ],
+  "overrides": [
+    {
+      "source_id": "chick-fil-a--fruit-cup",
+      "windows": null,
+      "source": "Cal Poly Dine On Campus Chick-fil-A menu lists Fruit Cup under SIDES on the Every Day menu",
+      "verified": "Campus menu: served all day"
+    },
+    {
+      "source_id": "chick-fil-a--greek-yogurt-parfait",
+      "windows": null,
+      "source": "chick-fil-a.com/menu/sides lists the Berry Parfait (official name) as a side",
+      "verified": "Chain menu lists it as a side; treated as all day"
+    },
+    {
+      "source_id": "chick-fil-a--berry-parfait-with-cookie-crumbs",
+      "windows": null,
+      "source": "chick-fil-a.com/menu/sides lists the Berry Parfait as a side",
+      "verified": "Chain menu lists it as a side; treated as all day"
+    }
+  ]
+}

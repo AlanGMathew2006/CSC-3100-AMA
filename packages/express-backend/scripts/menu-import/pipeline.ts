@@ -2,6 +2,7 @@
 // Each stage is a pure function so it can be tested without Supabase:
 //   CSV text -> parseCsv -> toItemRecords / toComboRecords (clean + validate) -> buildImportPlan (transform)
 //   dining_hours.json -> JSON.parse -> toHoursRecords (clean + validate) -> buildImportPlan
+//   serving_windows.json -> JSON.parse -> toServingWindowRules (clean + validate) -> applyServingWindows (filter)
 // The load stage (writing to Supabase) lives in ../import-menu.ts.
 
 import {
@@ -9,6 +10,7 @@ import {
   DAY_KEYS,
   DIETARY_TAGS,
   parseClockTime,
+  type ServingWindows,
   type WeeklyHours
 } from "@csc-3100-ama/shared";
 
@@ -396,6 +398,96 @@ export function toHoursRecords(data: unknown): {
   return { hours, problems };
 }
 
+export interface MealWindowRule {
+  restaurant: string;
+  category: string;
+  windows: ServingWindows;
+}
+
+export interface ComboWindowRule {
+  restaurant: string;
+  descriptionPrefix: string;
+  windows: ServingWindows;
+}
+
+export interface ServingWindowRules {
+  mealRules: MealWindowRule[];
+  comboRules: ComboWindowRule[];
+  overrides: { sourceId: string; windows: ServingWindows }[]; // by meal or combo source_id
+}
+
+// Parsed data/serving_windows.json -> rules. `windows` is the hours format, "unknown",
+// or null (all day, overrides only). Invalid entries are reported and dropped.
+export function toServingWindowRules(data: unknown): {
+  rules: ServingWindowRules;
+  problems: Problem[];
+} {
+  const rules: ServingWindowRules = {
+    mealRules: [],
+    comboRules: [],
+    overrides: []
+  };
+  const problems: Problem[] = [];
+  const record = (data ?? {}) as Record<string, unknown>;
+
+  const section = (
+    key: string,
+    allowNull: boolean,
+    each: (entry: Record<string, unknown>, windows: ServingWindows) => string | null
+  ) => {
+    const list = record[key] ?? [];
+    if (!Array.isArray(list)) {
+      problems.push({ row: 0, id: key, message: `${key} must be an array` });
+      return;
+    }
+    list.forEach((entry: Record<string, unknown>, index) => {
+      const fail = (message: string) =>
+        problems.push({ row: index + 1, id: key, message });
+      const windows = entry?.windows ?? null;
+      if (windows === null && !allowNull)
+        return fail("windows must be hours or \"unknown\"");
+      if (windows !== null && windows !== "unknown") {
+        const problem = hoursProblem(windows);
+        if (problem) return fail(problem);
+        if (typeof entry.source !== "string" || !entry.source.trim())
+          return fail("source is required when windows are set");
+      }
+      if (typeof entry.verified !== "string" || !entry.verified.trim())
+        return fail("verified note is required");
+      const problem = each(entry, windows as ServingWindows);
+      if (problem) fail(problem);
+    });
+  };
+
+  section("meal_rules", false, (entry, windows) => {
+    const restaurant = typeof entry.restaurant === "string" ? text(entry.restaurant) : null;
+    const category = typeof entry.category === "string" ? text(entry.category) : null;
+    if (!restaurant || !category) return "restaurant and category are required";
+    rules.mealRules.push({ restaurant, category, windows });
+    return null;
+  });
+  section("combo_rules", false, (entry, windows) => {
+    const restaurant = typeof entry.restaurant === "string" ? text(entry.restaurant) : null;
+    const descriptionPrefix =
+      typeof entry.description_prefix === "string" ? text(entry.description_prefix) : null;
+    if (!restaurant || !descriptionPrefix)
+      return "restaurant and description_prefix are required";
+    rules.comboRules.push({ restaurant, descriptionPrefix, windows });
+    return null;
+  });
+  const seen = new Set<string>();
+  section("overrides", true, (entry, windows) => {
+    const sourceId = typeof entry.source_id === "string" ? text(entry.source_id) : null;
+    if (!sourceId) return "source_id is required";
+    if (seen.has(sourceId)) return "duplicate source_id";
+    seen.add(sourceId);
+    rules.overrides.push({ sourceId, windows });
+    return null;
+  });
+
+  return { rules, problems };
+}
+
 // ---------- Stage 3: transform into database rows ----------
 
 export interface LocationRow {
@@ -424,6 +516,7 @@ export interface MealRow {
   tags: string[];
   allergens_verified: boolean;
   allergen_source: string | null;
+  serving_windows: ServingWindows; // null = whenever the location is open
 }
 
 // Offerings reference meals and locations by natural key; the load stage swaps in the uuids.
@@ -445,6 +538,7 @@ export interface ComboRow {
   entree_count: number | null;
   price: number;
   price_source: string | null;
+  serving_windows: ServingWindows;
 }
 
 export interface ImportPlan {
@@ -507,7 +601,8 @@ export function buildImportPlan(
       allergens: item.allergens,
       tags: item.tags,
       allergens_verified: item.allergensVerified,
-      allergen_source: item.allergenSource
+      allergen_source: item.allergenSource,
+      serving_windows: null
     });
 
     // Items without a standalone price (e.g. Panda entrees, sold only in combos) get no offering.
@@ -539,7 +634,8 @@ export function buildImportPlan(
       base_count: combo.baseCount,
       entree_count: combo.entreeCount,
       price: combo.price,
-      price_source: combo.priceSource
+      price_source: combo.priceSource,
+      serving_windows: null
     })),
     unpricedMeals,
     locationsWithoutHours: [...locations.values()]
@@ -549,4 +645,61 @@ export function buildImportPlan(
       .map((record) => record.locationName)
       .filter((name) => !locations.has(name))
   };
+}
+
+// ---------- Stage 4: filter, apply item serving windows ----------
+
+// Sets serving_windows on meals (by restaurant + category) and combos (by restaurant + description
+// prefix); overrides by source_id win. Rows no rule matches are served all day (null), so a
+// re-import always writes the current rules. `unmatched` lists rules/overrides that matched nothing.
+export function applyServingWindows(
+  plan: ImportPlan,
+  rules: ServingWindowRules
+): { plan: ImportPlan; unmatched: string[] } {
+  const used = new Set<string>();
+  const overrides = new Map(
+    rules.overrides.map((o) => [o.sourceId, o.windows])
+  );
+  const pick = (sourceId: string, ruleWindows: () => [string, ServingWindows] | null) => {
+    if (overrides.has(sourceId)) {
+      used.add(`override ${sourceId}`);
+      return overrides.get(sourceId) ?? null;
+    }
+    const match = ruleWindows();
+    if (!match) return null;
+    used.add(match[0]);
+    return match[1];
+  };
+
+  const meals = plan.meals.map((meal) => ({
+    ...meal,
+    serving_windows: pick(meal.source_id, () => {
+      const rule = rules.mealRules.find(
+        (r) =>
+          r.restaurant === meal.restaurant &&
+          r.category.toLowerCase() === meal.category.toLowerCase()
+      );
+      return rule ? [`meal rule ${rule.restaurant} / ${rule.category}`, rule.windows] : null;
+    })
+  }));
+  const combos = plan.combos.map((combo) => ({
+    ...combo,
+    serving_windows: pick(combo.source_id, () => {
+      const rule = rules.comboRules.find(
+        (r) =>
+          r.restaurant === combo.restaurant &&
+          (combo.description ?? "").startsWith(r.descriptionPrefix)
+      );
+      return rule
+        ? [`combo rule ${rule.restaurant} / ${rule.descriptionPrefix}`, rule.windows]
+        : null;
+    })
+  }));
+
+  const unmatched = [
+    ...rules.mealRules.map((r) => `meal rule ${r.restaurant} / ${r.category}`),
+    ...rules.comboRules.map((r) => `combo rule ${r.restaurant} / ${r.descriptionPrefix}`),
+    ...rules.overrides.map((o) => `override ${o.sourceId}`)
+  ].filter((name) => !used.has(name));
+  return { plan: { ...plan, meals, combos }, unmatched };
 }

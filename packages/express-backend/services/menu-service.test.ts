@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getMenu, latestOfferings } from "./menu-service.js";
+import {
+  comboAvailability,
+  getMenu,
+  latestOfferings
+} from "./menu-service.js";
 
 const loc = (id: string, name: string) => ({
   id,
@@ -78,8 +82,8 @@ test("latestOfferings marks each location open, closed, or unknown at the given 
   );
 });
 
-// Minimal chainable stand-in for the two queries getMenu makes.
-function menuDb(meals: unknown[]) {
+// Minimal chainable stand-in for the queries getMenu makes.
+function menuDb(meals: unknown[], locations: unknown[] = []) {
   const query = (data: unknown[]) => {
     const chain = {
       select: () => chain,
@@ -91,7 +95,14 @@ function menuDb(meals: unknown[]) {
     return chain;
   };
   return {
-    from: (table: string) => query(table === "meals" ? meals : [])
+    from: (table: string) =>
+      query(
+        table === "meals"
+          ? meals
+          : table === "dining_locations"
+            ? locations
+            : []
+      )
   } as unknown as SupabaseClient;
 }
 
@@ -132,4 +143,51 @@ test("getMenu with openNow drops closed locations but keeps unknown hours and co
       ["combo-only", []]
     ]
   );
+});
+
+const BREAKFAST = openAllWeek("00:00", "10:30");
+
+test("offerings carry availability from location hours and the item's serving window", () => {
+  const at = new Date("2026-10-28T13:00:00-07:00");
+  assert.deepEqual(
+    latestOfferings([offering(OPEN)], at, BREAKFAST).map((o) => [o.open_status, o.availability]),
+    [["open", "not_now"]]
+  );
+  assert.deepEqual(
+    latestOfferings([offering(OPEN)], at, "unknown").map((o) => o.availability),
+    ["unknown"]
+  );
+  assert.deepEqual(
+    latestOfferings([offering(OPEN)], at).map((o) => o.availability),
+    ["available"]
+  );
+});
+
+test("getMenu with openNow hides breakfast after its window and keeps unknown serving times", async () => {
+  const at = new Date("2026-10-28T13:00:00-07:00");
+  const db = menuDb([
+    { ...meal("biscuit", [offering(OPEN)]), serving_windows: BREAKFAST },
+    { ...meal("subway-egg", [offering(OPEN)]), serving_windows: "unknown" },
+    { ...meal("sandwich", [offering(OPEN)]), serving_windows: null }
+  ]);
+  const open = await getMenu(db, { openNow: true, at });
+  assert.deepEqual(
+    open.items.map((item) => [item.id, item.offerings[0]?.availability]),
+    [
+      ["subway-egg", "unknown"],
+      ["sandwich", "available"]
+    ]
+  );
+});
+
+test("comboAvailability checks the restaurant's locations and the combo's window", () => {
+  const locations = [{ restaurant: "Chick-fil-A", hours: openAllWeek("07:00", "21:00") }];
+  const breakfastMeal = { restaurant: "Chick-fil-A", serving_windows: BREAKFAST };
+  assert.equal(comboAvailability(breakfastMeal, locations, new Date("2026-10-28T09:00:00-07:00")), "available");
+  assert.equal(comboAvailability(breakfastMeal, locations, new Date("2026-10-28T13:00:00-07:00")), "not_now");
+  assert.equal(
+    comboAvailability({ restaurant: "Chick-fil-A", serving_windows: null }, locations, new Date("2026-10-28T13:00:00-07:00")),
+    "available"
+  );
+  assert.equal(comboAvailability({ restaurant: "Nowhere", serving_windows: null }, locations, new Date()), "unknown");
 });

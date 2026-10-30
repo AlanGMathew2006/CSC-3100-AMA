@@ -5,6 +5,7 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
 import { useMealTargets } from "../../hooks/useRecommendations";
+import { servingLabel, servingStatusText } from "../../lib/serving";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 const FILTERS = ["Location", "Price", "Protein", "Calories", "Dietary"] as const;
@@ -52,6 +53,10 @@ export function MenuPage({
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [menu]);
   const unknownHoursCount = locationStatuses.filter((l) => l.status === "unknown").length;
+  // "Open now" also hides combos that aren't served now (e.g. breakfast meals after 10:30).
+  const combos = (menu?.combos ?? []).filter(
+    (combo) => !openNow || combo.availability !== "not_now",
+  );
   const items = useMemo(() => {
     const available = openNow ? keepOpenOfferings(menu?.items ?? []) : (menu?.items ?? []);
     const filtered = available.filter((item) => {
@@ -225,14 +230,21 @@ export function MenuPage({
           </section>
         )}
 
-        {menu && menu.combos.length > 0 && (
+        {combos.length > 0 && (
           <section className="combo-section">
             <h2>Combos &amp; Meals</h2>
-            {menu.combos.map((combo) => (
+            {combos.map((combo) => (
               <article className="combo-card" key={combo.id}>
                 <div>
                   <span className="meal-label">{combo.restaurant}</span>
                   <strong>{combo.name}</strong>
+                  {servingLabel(combo) && (
+                    <span className="meal-label">
+                      {servingLabel(combo)}
+                      {servingStatusText(combo.serving_windows, combo.availability) &&
+                        ` · ${servingStatusText(combo.serving_windows, combo.availability)}`}
+                    </span>
+                  )}
                   {combo.description && <span>{combo.description}</span>}
                 </div>
                 <b>${combo.price.toFixed(2)}</b>

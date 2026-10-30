@@ -18,6 +18,12 @@ export type WeeklyHours = Partial<Record<DayKey, HoursWindow[]>>;
 
 export type OpenStatus = "open" | "closed" | "unknown";
 
+// When an item is served (meals.serving_windows / menu_combos.serving_windows), in the same format
+// as location hours. null = whenever the location is open; "unknown" = not verified.
+export type ServingWindows = WeeklyHours | "unknown" | null;
+
+export type ItemAvailability = "available" | "not_now" | "unknown";
+
 // "07:30" -> 450. Accepts 00:00 through 24:00; returns null for anything else.
 export function parseClockTime(value: unknown): number | null {
   if (typeof value !== "string") return null;
@@ -112,14 +118,36 @@ export function getOpenStatus(
   return openToday || openFromYesterday ? "open" : "closed";
 }
 
-// Drops offerings at closed locations; offerings with unknown hours stay (marked by open_status).
-// Items left with no offerings are dropped, but items that never had one (combo-only) are kept.
+// Whether the item's own serving window is open at `at`, ignoring location hours.
+export function servingWindowStatus(windows: ServingWindows | undefined, at: Date): OpenStatus {
+  if (windows == null) return "open";
+  if (windows === "unknown") return "unknown";
+  return getOpenStatus(windows, at);
+}
+
+// Available only when the location is open AND the item's serving window is open.
+// A definite "no" from either side wins (not_now); otherwise anything unknown gives "unknown".
+export function getItemAvailability(
+  itemWindows: ServingWindows | undefined,
+  locationHours: WeeklyHours | null | undefined,
+  at: Date,
+): ItemAvailability {
+  const location = getOpenStatus(locationHours, at);
+  const item = servingWindowStatus(itemWindows, at);
+  if (location === "closed" || item === "closed") return "not_now";
+  if (location === "unknown" || item === "unknown") return "unknown";
+  return "available";
+}
+
+// Drops offerings that aren't served right now (closed location or outside the item's serving
+// window); "unknown" ones stay, marked by `availability`. Items left with no offerings are dropped,
+// but items that never had one (combo-only) are kept.
 export function keepOpenOfferings<
-  T extends { offerings: { open_status: OpenStatus }[] },
+  T extends { offerings: { availability: ItemAvailability }[] },
 >(items: T[]): T[] {
   return items.flatMap((item) => {
     if (item.offerings.length === 0) return [item];
-    const offerings = item.offerings.filter((o) => o.open_status !== "closed");
+    const offerings = item.offerings.filter((o) => o.availability !== "not_now");
     return offerings.length ? [{ ...item, offerings }] : [];
   });
 }

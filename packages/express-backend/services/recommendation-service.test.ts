@@ -50,13 +50,15 @@ const item = (
     locationId,
     allergens = [],
     verified = true,
-    component = null
+    component = null,
+    windows = null
   }: {
     price?: number;
     locationId?: string;
     allergens?: string[];
     verified?: boolean;
     component?: "base" | "entree" | null;
+    windows?: MenuItem["serving_windows"];
   } = {}
 ): MenuItem => ({
   id,
@@ -72,6 +74,7 @@ const item = (
   tags: [],
   allergens,
   allergens_verified: verified,
+  serving_windows: windows,
   offerings:
     price == null || !locationId
       ? []
@@ -82,7 +85,8 @@ const item = (
             campus_area: null,
             price,
             service_date: "2026-10-05",
-            open_status: "open"
+            open_status: "open",
+            availability: "available"
           }
         ]
 });
@@ -384,4 +388,50 @@ test("meals_remaining overrides the time-of-day default", async () => {
   const result = await recommend(data(), { at: NOON_WED, mealsRemaining: 1 });
   assert.equal(result.meals_remaining, 1);
   assert.deepEqual(result.targets, { calories: 1500, protein_g: 80, carbs_g: 190, fat_g: 50 });
+});
+
+// Breakfast served 00:00-10:30 every day (same shape as the Chick-fil-A rule).
+const BREAKFAST = Object.fromEntries(DAYS.map((d) => [d, [{ open: "00:00", close: "10:30" }]]));
+// Exactly the per-meal targets for 2 meals left (750 / 40 / 95 / 25), cheap: the best possible fit.
+const perfectBreakfast = (windows: MenuItem["serving_windows"]) =>
+  item("sub-breakfast", "Subway", [750, 40, 95, 25], {
+    price: 5,
+    locationId: "loc-sub",
+    windows
+  });
+
+test("a breakfast item that is the best macro fit is never picked at 13:00", async () => {
+  const menu = { items: [...ITEMS, perfectBreakfast(BREAKFAST)], combos: COMBOS };
+  const options = { locationId: "loc-sub", mealsRemaining: 2, limit: 1 };
+
+  const morning = await recommend(data({ menu }), {
+    ...options,
+    at: new Date("2026-10-28T09:00:00-07:00")
+  });
+  assert.deepEqual(morning.recommendations[0]?.items.map((i) => i.meal_id), ["sub-breakfast"]);
+
+  const afternoon = await recommend(data({ menu }), {
+    ...options,
+    at: new Date("2026-10-28T13:00:00-07:00")
+  });
+  assert.ok(afternoon.recommendations.length > 0);
+  for (const rec of afternoon.recommendations) {
+    assert.ok(rec.items.every((i) => i.meal_id !== "sub-breakfast"));
+  }
+});
+
+test("items and combos with an unknown serving time are never recommended", async () => {
+  const result = await recommend(
+    data({
+      menu: {
+        items: [...ITEMS, perfectBreakfast("unknown")],
+        combos: COMBOS.map((c) => (c.id === "c-bowl" || c.id === "c-plate" ? { ...c, serving_windows: "unknown" as const } : c))
+      }
+    }),
+    { at: new Date("2026-10-28T09:00:00-07:00"), mealsRemaining: 2, limit: 10 }
+  );
+  for (const rec of result.recommendations) {
+    assert.ok(rec.items.every((i) => i.meal_id !== "sub-breakfast"));
+    assert.equal(rec.combo, null);
+  }
 });

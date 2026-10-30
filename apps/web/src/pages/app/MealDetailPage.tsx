@@ -2,6 +2,7 @@ import { macroMatch, type MenuItem } from "@csc-3100-ama/shared";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useMealTargets } from "../../hooks/useRecommendations";
 import { allergenLabel } from "../../lib/allergens";
+import { servingLabel, servingStatusText } from "../../lib/serving";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
@@ -100,6 +101,13 @@ export function MealDetailPage({
               <p className="detail-location">
                 <span /> {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
               </p>
+              {servingLabel(item) && (
+                <p className="field-helper">
+                  {servingLabel(item)}
+                  {servingStatusText(item.serving_windows, offering?.availability) &&
+                    ` · ${servingStatusText(item.serving_windows, offering?.availability)}`}
+                </p>
+              )}
             </div>
             <strong>{price == null ? "—" : `$${price.toFixed(2)}`}</strong>
           </div>

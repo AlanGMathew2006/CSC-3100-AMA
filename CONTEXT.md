@@ -145,8 +145,10 @@ Implemented in packages/express-backend/services/recommendation-service.ts
 3. Candidates: locations that are open now (or whose hours are
    unknown), take Dining Dollars, and match the preferred or chosen
    location. Meals must have nutrition data, pass the dietary and
-   allergen filters (isMealAllowed), and have a price there, or be a
-   Panda base/entree used in a Bowl, Plate, or Bigger Plate.
+   allergen filters (isMealAllowed), be served right now (item serving
+   windows, e.g. breakfast until 10:30; an unknown serving time is
+   excluded), and have a price there, or be a Panda base/entree used in
+   a Bowl, Plate, or Bigger Plate.
 4. For each location the model picks whole quantities: up to 2 of each
    priced item, at most one build-your-own combo with exactly its base
    and entree count, 1 to 4 items in total, and never over the budget.

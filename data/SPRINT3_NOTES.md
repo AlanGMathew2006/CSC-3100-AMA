@@ -35,6 +35,9 @@ Before every commit these all passed: `npm run build`, `npm run lint`, `npm test
 - `packages/shared` is now `"type": "module"` so the compiled backend can import runtime code from it.
 - Panda combo-only items have no location offering, so the open-now filter doesn't hide them.
 - No schema change: `dining_locations.hours` already exists.
+- Location hours only say when a location is open, not when each item is served. Breakfast-only
+  items are handled separately by item serving windows (`data/serving_windows.json`, migration
+  `20261031000000_item_serving_windows.sql`), added on sprint3/macro-match.
 
 ## Testing
 - Unit tests for getOpenStatus (open, closed, unknown, exact open/close minute, after-midnight closes,
@@ -102,6 +105,9 @@ Run the migration in the Supabase SQL editor before deploying this backend: GET 
 - Dashboard uses the endpoint instead of the old ad-hoc sort, keeping the existing MealCard layout, and
   shows the Macro Match breakdown. MenuPage and MealDetailPage show Macro Match for single items.
 - CONTEXT.md: "Recommendation algorithm" section.
+- Item serving windows (`data/serving_windows.json`): breakfast items only show with "Open now" and
+  only get recommended during breakfast (Chick-fil-A until 10:30, chain-wide time; Subway unknown).
+  New migration `20261031000000_item_serving_windows.sql`, which runs after 20261030000000.
 
 ## Notes
 - Deterministic: inputs sorted by id; ties by objective, then cost, then location name.
@@ -184,18 +190,63 @@ Run the migration in the Supabase SQL editor before deploying this backend: GET 
 - The Dockerfile's build stage runs `npm ci` but never `npm run build`, so it only works if
   `apps/web/dist` was already built on the host.
 
+## Follow-up: item serving windows (breakfast bug)
+
+Commit "Add item serving windows so breakfast items only show during breakfast" on
+sprint3/macro-match.
+
+- **Bug:** breakfast-only items showed up on Explore, with "Open now", and in recommendations outside
+  breakfast, because only location hours were tracked.
+- **New migration:** `packages/express-backend/supabase/migrations/20261031000000_item_serving_windows.sql`
+  adds `serving_windows jsonb` (null = all day) to `meals` and `menu_combos`. It runs **after**
+  `20261030000000_meal_allergens_verified.sql`. Then re-run `npm run import:menu`.
+- **Data:** `data/serving_windows.json` has rules by restaurant + category (meals) or restaurant +
+  description prefix (combos), plus overrides by source_id.
+  - Chick-fil-A breakfast and the 13 "Breakfast meal" combos are served 00:00-10:30 every day. That is
+    the chain-wide time from chick-fil-a.com, not campus-confirmed. Saturday breakfast never shows,
+    because the store opens at 11:00.
+  - Subway's 4 breakfast items are "unknown" (on DATA_TODO).
+  - Taco Bell and Panda: unchanged.
+- **Availability:** `getItemAvailability(itemWindows, locationHours, at)` in shared returns
+  available / not_now / unknown. GET /api/menu adds `availability` to each offering and combo, and
+  `open_now=true` hides not_now and keeps unknown. The recommender only uses items and combos whose
+  serving window is open now. Unknown serving times are never recommended.
+- **PR description addition** for sprint3/macro-match: "Adds item serving windows so breakfast items
+  only show and get recommended during breakfast (migration 20261031000000, runs after
+  20261030000000)."
+
+Decisions made on this fix:
+- Of the 20 Chick-fil-A "Breakfast" rows, 18 get the breakfast window. "Greek Yogurt Parfait"
+  (official name Berry Parfait) and "Berry Parfait with Cookie Crumbs" stay all-day, because
+  chick-fil-a.com lists the Berry Parfait under Sides. Fruit Cup is already in Sides in the CSV;
+  it also has an all-day override, as you asked.
+- "Mini Yeast Rolls (4 ct)" might be all-day, but I had no evidence, so it follows the breakfast rule.
+  It's on DATA_TODO to check.
+- A definite "no" beats "unknown". If the location is closed or the item's window is closed, the item
+  is not_now even when the other side is unknown.
+- The recommender still allows locations with unknown hours (Task 3 rule). There, the item's own
+  window must be open. Every location has verified hours now, so this doesn't currently matter.
+- Combo availability uses every location of the combo's restaurant: available if any of them serves
+  it now. Combos aren't tied to one location in the data.
+- `/api/meal-targets` doesn't depend on which items are served, so it is unchanged.
+- The label says "Breakfast" when the category or combo description says breakfast, otherwise
+  "Limited hours". The time comes from the window, e.g. "Breakfast · until 10:30 am".
+
 ## 3. Remaining manual steps
 
-1. **Supabase SQL editor**: run
-   `packages/express-backend/supabase/migrations/20261030000000_meal_allergens_verified.sql`. It is the
-   only new migration (Tasks 1 and 3 need none), and it must run before you deploy the allergen
-   branch's backend.
+1. **Supabase SQL editor**, in this order:
+   1. `packages/express-backend/supabase/migrations/20261030000000_meal_allergens_verified.sql`
+      (before deploying the allergen branch's backend).
+   2. `packages/express-backend/supabase/migrations/20261031000000_item_serving_windows.sql`
+      (before deploying sprint3/macro-match; GET /api/menu selects `serving_windows`).
 2. **Re-import** from `packages/express-backend`: `npm run import:menu -- --dry-run`, then
-   `npm run import:menu`. This loads hours, allergens and tags.
+   `npm run import:menu`. This loads hours, allergens, tags and serving windows.
 3. **data/DATA_TODO.md**:
    - 36 prices to look up in Grubhub (11 Panda bases/entrees are combo-only and need nothing).
    - 159 unverified allergen rows (all of Taco Bell, Subway and Panda, plus 45 Chick-fil-A items).
    - No vegetarian / vegan / gluten_free tags yet, so those filters show nothing until they're added.
+   - Subway breakfast cutoff (PCV and Kennedy Library); confirm Chick-fil-A's 10:30 cutoff on campus;
+     check whether Mini Yeast Rolls are sold all day.
    - Re-check hours each quarter and before breaks.
 4. Click through Dashboard, Explore and Meal details while signed in. I couldn't sign in from here, so
    the UI is only covered by unit tests on its helpers.

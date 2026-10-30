@@ -1,4 +1,5 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import { servingLabel, servingStatusText } from "../lib/serving";
 import { macroScoreText } from "./MacroMatch";
 
 export const cheapestOffering = (item: MenuItem) =>
@@ -31,7 +32,8 @@ export function MealCard({
 }: {
   item: MenuItem;
   saved: boolean;
-  // Shows whether the location of the listed (cheapest) offering is open now.
+  // Shows whether the location of the listed (cheapest) offering is open now, and the item's
+  // serving window (e.g. "Breakfast · until 10:30 am") with "Not served right now" after it.
   showOpenStatus?: boolean;
   // Macro Match against the next meal's targets; omit to hide, null shows "unavailable".
   macroScore?: number | null;
@@ -40,6 +42,10 @@ export function MealCard({
 }) {
   const price = mealPrice(item);
   const offering = cheapestOffering(item);
+  const serving = showOpenStatus ? servingLabel(item) : null;
+  const servingStatus = showOpenStatus
+    ? servingStatusText(item.serving_windows, offering?.availability)
+    : null;
 
   return (
     <article className="meal-card">
@@ -49,6 +55,12 @@ export function MealCard({
             {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
           </span>
           {showOpenStatus && offering && <OpenBadge status={offering.open_status} />}
+          {serving && (
+            <span className="meal-label">
+              {serving}
+              {servingStatus && ` · ${servingStatus}`}
+            </span>
+          )}
           {macroScore !== undefined && (
             <span className="meal-label">{macroScoreText(macroScore)}</span>
           )}

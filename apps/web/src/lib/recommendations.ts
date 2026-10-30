@@ -32,6 +32,8 @@ export function recommendationAsMenuItem(
         price: rec.total_price,
         service_date: "",
         open_status: rec.location.open_status,
+        // The optimizer only picks items being served right now.
+        availability: "available",
       },
     ],
   };

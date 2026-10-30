@@ -165,6 +165,10 @@ create unique index if not exists meals_source_id_key on public.meals (source_id
 alter table public.meals add column if not exists allergens_verified boolean not null default false;
 alter table public.meals add column if not exists allergen_source text;
 
+-- ============ Item serving windows (Sprint 3, see migrations/20261031000000_item_serving_windows.sql) ============
+-- null = whenever the location is open; otherwise the dining_locations.hours format or "unknown".
+alter table public.meals add column if not exists serving_windows jsonb;
+
 -- ============ Menu offerings: where the price came from ============
 alter table public.menu_offerings add column if not exists price_source text;
 
@@ -187,6 +191,8 @@ drop trigger if exists menu_combos_set_updated_at on public.menu_combos;
 create trigger menu_combos_set_updated_at
   before update on public.menu_combos
   for each row execute function public.set_updated_at();
+
+alter table public.menu_combos add column if not exists serving_windows jsonb;
 
 alter table public.menu_combos enable row level security;
 drop policy if exists "Authenticated read menu combos" on public.menu_combos;
