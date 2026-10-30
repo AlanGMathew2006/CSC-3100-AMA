@@ -1,4 +1,5 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import { macroScoreText } from "./MacroMatch";
 
 export const cheapestOffering = (item: MenuItem) =>
   item.offerings.reduce<(typeof item.offerings)[number] | null>(
@@ -24,6 +25,7 @@ export function MealCard({
   item,
   saved,
   showOpenStatus = false,
+  macroScore,
   onSelect,
   onToggleSaved,
 }: {
@@ -31,6 +33,8 @@ export function MealCard({
   saved: boolean;
   // Shows whether the location of the listed (cheapest) offering is open now.
   showOpenStatus?: boolean;
+  // Macro Match against the next meal's targets; omit to hide, null shows "unavailable".
+  macroScore?: number | null;
   onSelect: () => void;
   onToggleSaved: () => void;
 }) {
@@ -45,6 +49,9 @@ export function MealCard({
             {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
           </span>
           {showOpenStatus && offering && <OpenBadge status={offering.open_status} />}
+          {macroScore !== undefined && (
+            <span className="meal-label">{macroScoreText(macroScore)}</span>
+          )}
           <strong>{item.name}</strong>
         </span>
         <span className="meal-card-price">

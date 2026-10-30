@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MenuItem } from "@csc-3100-ama/shared";
+import type { MenuItem, Recommendation } from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { cheapestOffering, MealCard, mealPrice } from "../../components/MealCard";
+import { MacroMatchSummary, macroScoreText } from "../../components/MacroMatch";
+import { MealCard } from "../../components/MealCard";
 import { useDashboard } from "../../hooks/useDashboard";
 import { useMenu } from "../../hooks/useMenu";
+import { useRecommendations } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
+import { NO_RECOMMENDATION_MESSAGES, recommendationAsMenuItem } from "../../lib/recommendations";
 import type { UserPreferences } from "../../types/dashboard";
 import { NutritionSheet } from "./NutritionSheet";
 
@@ -35,6 +38,7 @@ export function DashboardPage({
   const { user } = useAuth();
   const { data, error, logging, reload, addMeal } = useDashboard();
   const menu = useMenu();
+  const recs = useRecommendations({ limit: 3 });
   const saved = useSavedMeals();
   const [view, setView] = useState<"daily" | "weekly">("daily");
   const [selectedNutrient, setSelectedNutrient] = useState<NutrientKey | null>(null);
@@ -79,26 +83,19 @@ export function DashboardPage({
     user?.email?.split("@")[0] ||
     "Student";
 
-  const recommendations = useMemo(() => {
-    const items = [...(menu.menu?.items ?? [])];
-    const priorities = preferences?.nutrition_priorities ?? [];
-    const preferredLocations = new Set(preferences?.preferred_location_ids ?? []);
-    const score = (item: MenuItem) => {
-      let value = 0;
-      if (preferredLocations.size && item.offerings.some((offering) => preferredLocations.has(offering.location_id))) value -= 100;
-      if (priorities.includes("High protein")) value -= item.protein_g ?? 0;
-      if (priorities.includes("Lower calorie")) value += item.calories ?? 10000;
-      if (priorities.includes("Budget-friendly")) value += (mealPrice(item) ?? 10000) * 10;
-      if (priorities.includes("Balanced")) {
-        const calorieGoal = data?.goals?.calories ?? 2000;
-        const proteinGoal = data?.goals?.protein_g ?? 100;
-        value += Math.abs((item.calories ?? calorieGoal) - calorieGoal) / Math.max(calorieGoal, 1);
-        value += Math.abs((item.protein_g ?? proteinGoal) - proteinGoal) / Math.max(proteinGoal, 1);
-      }
-      return value;
-    };
-    return items.sort((a, b) => score(a) - score(b)).slice(0, 3);
-  }, [data?.goals, menu.menu, preferences]);
+  // Ranked by the optimizer (GET /api/recommendations); each is shown through the existing MealCard.
+  // `item` is the whole recommendation for display; `meal` is its first real menu item, which is
+  // what details and saving use, so allergen info always matches the meal shown.
+  const recommendations = useMemo(
+    () =>
+      (recs.data?.recommendations ?? []).flatMap((rec) => {
+        const items = menu.menu?.items ?? [];
+        const item = recommendationAsMenuItem(rec, items);
+        const meal = item && items.find((candidate) => candidate.id === item.id);
+        return item && meal ? [{ rec, item, meal }] : [];
+      }),
+    [recs.data, menu.menu],
+  );
   const weeklyDays = useMemo(() => {
     const today = new Date();
     const mondayOffset = (today.getDay() + 6) % 7;
@@ -125,21 +122,23 @@ export function DashboardPage({
     1,
   );
 
-  async function handleAddMeal(item: MenuItem) {
-    const price = mealPrice(item);
-    const offering = cheapestOffering(item);
+  async function handleAddMeal({ rec, item }: { rec: Recommendation; item: MenuItem }) {
+    const single = !rec.combo && rec.items.length === 1;
     const succeeded = await addMeal({
-      meal_id: item.id,
-      location_id: offering?.location_id,
+      meal_id: single ? item.id : undefined,
+      location_id: rec.location.id,
       name: item.name,
-      location_name: offering?.location_name ?? item.restaurant,
-      price: price ?? 0,
-      calories: item.calories ?? 0,
-      protein_g: item.protein_g ?? 0,
-      carbs_g: item.carbs_g ?? 0,
-      fat_g: item.fat_g ?? 0,
+      location_name: rec.location.name,
+      price: rec.total_price,
+      calories: rec.nutrition.calories ?? undefined,
+      protein_g: rec.nutrition.protein_g ?? undefined,
+      carbs_g: rec.nutrition.carbs_g ?? undefined,
+      fat_g: rec.nutrition.fat_g ?? undefined,
     });
-    if (succeeded) onToast("Meal added to today");
+    if (succeeded) {
+      onToast("Meal added to today");
+      void recs.reload();
+    }
   }
 
   async function toggleSaved(item: MenuItem) {
@@ -181,6 +180,14 @@ export function DashboardPage({
           </p>
         )}
         {menu.error && <p className="field-helper error" role="alert">{menu.error}</p>}
+        {recs.error && (
+          <p className="field-helper error" role="alert">
+            {recs.error}{" "}
+            <button type="button" className="link-button" onClick={() => void recs.reload()}>
+              Retry
+            </button>
+          </p>
+        )}
         {saved.error && <p className="field-helper error" role="alert">{saved.error}</p>}
         {preferencesError && <p className="field-helper error" role="alert">{preferencesError}</p>}
         <div className="toggle-pill" aria-label="Daily or weekly view">
@@ -298,21 +305,26 @@ export function DashboardPage({
           )}
         </section>
 
-        {menu.loading && !menu.menu && (
+        {(recs.loading || menu.loading) && recommendations.length === 0 && (
           <p className="field-helper success" role="status">Loading meal recommendations…</p>
         )}
-        {recommendations.length > 0 && (
+        {!recs.loading && recs.data?.reason && (
+          <p className="empty-card">{NO_RECOMMENDATION_MESSAGES[recs.data.reason]}</p>
+        )}
+        {recommendations[0] && (
           <>
             <section className="recommend-card">
               <h2>What should I eat next?</h2>
               <MealCard
-                item={recommendations[0]}
-                saved={saved.isSaved(recommendations[0].id)}
-                onSelect={() => onSelectMeal(recommendations[0])}
-                onToggleSaved={() => void toggleSaved(recommendations[0])}
+                item={recommendations[0].item}
+                saved={saved.isSaved(recommendations[0].item.id)}
+                onSelect={() => onSelectMeal(recommendations[0].meal)}
+                onToggleSaved={() => void toggleSaved(recommendations[0].meal)}
               />
+              <p className="recommend-explanation">{recommendations[0].rec.explanation}</p>
+              <MacroMatchSummary match={recommendations[0].rec.macro_match} />
               <div className="meal-actions">
-                <button type="button" className="text-link" onClick={() => onSelectMeal(recommendations[0])}>
+                <button type="button" className="text-link" onClick={() => onSelectMeal(recommendations[0].meal)}>
                   View Meal
                 </button>
                 <button
@@ -327,14 +339,18 @@ export function DashboardPage({
             </section>
             <section className="recommend-options">
               <h2>Best options for you today</h2>
-              {recommendations.map((item) => (
-                <MealCard
-                  key={item.id}
-                  item={item}
-                  saved={saved.isSaved(item.id)}
-                  onSelect={() => onSelectMeal(item)}
-                  onToggleSaved={() => void toggleSaved(item)}
-                />
+              {recommendations.map(({ rec, item, meal }) => (
+                <div key={rec.location.id}>
+                  <MealCard
+                    item={item}
+                    saved={saved.isSaved(item.id)}
+                    onSelect={() => onSelectMeal(meal)}
+                    onToggleSaved={() => void toggleSaved(meal)}
+                  />
+                  <p className="recommend-explanation">
+                    {macroScoreText(rec.macro_match.score)} · {rec.explanation}
+                  </p>
+                </div>
               ))}
             </section>
           </>

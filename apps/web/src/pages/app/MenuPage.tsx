@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { keepOpenOfferings, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
+import { keepOpenOfferings, macroMatch, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
+import { useMealTargets } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 const FILTERS = ["Location", "Price", "Protein", "Calories", "Dietary"] as const;
@@ -20,6 +21,7 @@ export function MenuPage({
 }) {
   const { menu, loading, error, reload } = useMenu();
   const saved = useSavedMeals();
+  const mealTargets = useMealTargets();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Location");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -195,6 +197,9 @@ export function MenuPage({
                 <MealCard
                   item={item}
                   showOpenStatus
+                  macroScore={
+                    mealTargets.data ? macroMatch(item, mealTargets.data.targets).score : undefined
+                  }
                   saved={saved.isSaved(item.id)}
                   onSelect={() => onSelectMeal(item)}
                   onToggleSaved={() => void handleToggle(item)}
