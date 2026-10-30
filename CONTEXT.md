@@ -149,9 +149,12 @@ Implemented in packages/express-backend/services/recommendation-service.ts
    windows, e.g. breakfast until 10:30; an unknown serving time is
    excluded), and have a price there, or be a Panda base/entree used in
    a Bowl, Plate, or Bigger Plate.
-4. For each location the model picks whole quantities: up to 2 of each
-   priced item, at most one build-your-own combo with exactly its base
-   and entree count, 1 to 4 items in total, and never over the budget.
+4. For each location the model picks whole quantities, and every meal
+   is built around a main dish (meal roles from data/meal_roles.json):
+   1-2 mains, where a build-your-own combo (exactly its base and entree
+   count) counts as one; at most one side and one drink; never desserts
+   or sauces. Up to 2 of the same main, 1 of anything else, at most 4
+   items, and never over the budget.
    It minimizes how far the meal lands from each target (going under
    and going over are each weighted, relative to the target) plus a
    small cost term, so the answer is not simply the cheapest meal.

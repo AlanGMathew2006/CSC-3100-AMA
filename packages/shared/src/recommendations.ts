@@ -1,5 +1,6 @@
 // Response types for GET /api/recommendations and GET /api/meal-targets.
 import type { OpenStatus } from "./hours.js";
+import type { MealRole } from "./index.js";
 import type { MacroMatchResult, MacroValues } from "./macro-match.js";
 
 export interface MealTargetsResponse {
@@ -20,6 +21,7 @@ export interface RecommendationItem {
   // Standalone price each; null for parts of a combo (the combo carries the price).
   unit_price: number | null;
   combo_part: "base" | "entree" | null;
+  meal_role: MealRole;
 }
 
 export interface Recommendation {

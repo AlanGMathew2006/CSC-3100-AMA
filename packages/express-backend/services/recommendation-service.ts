@@ -123,11 +123,16 @@ export function objectiveWeights(priorities: string[]): ObjectiveWeights {
 
 type Nutrition = Record<Macro, number>;
 
+// Roles the optimizer may use on their own. Desserts and sauces are never recommended.
+export const RECOMMENDABLE_ROLES = ["main", "side", "drink"] as const;
+export type RecommendableRole = (typeof RECOMMENDABLE_ROLES)[number];
+
 export interface StandaloneOption {
   id: string;
   name: string;
   price: number;
   nutrition: Nutrition;
+  role: RecommendableRole;
 }
 
 export interface ComponentOption {
@@ -164,7 +169,9 @@ export interface BuiltModel {
   variables: Record<string, ModelVariable>; // LP variable name -> meal / combo
 }
 
-export const MAX_STANDALONE_QUANTITY = 2;
+export const MAX_MAIN_QUANTITY = 2; // e.g. two of the same taco
+export const MAX_OTHER_QUANTITY = 1; // sides and drinks
+export const MAX_MAINS = 2; // mains + combos
 export const MAX_ITEMS = 4;
 
 const byId = <T extends { id: string }>(list: T[]) =>
@@ -186,12 +193,13 @@ function linear(terms: [number, string][]): string {
 }
 
 // Builds the goal-programming MILP for one location as CPLEX LP text.
-// Returns null when there is nothing to choose from.
+// Returns null when no meal is possible (every meal needs a main or a combo).
 export function buildModel(input: ModelInput): BuiltModel | null {
   const standalone = byId(input.standalone);
   const components = input.combos.length ? byId(input.components) : [];
   const combos = components.length ? byId(input.combos) : [];
-  if (standalone.length === 0 && combos.length === 0) return null;
+  if (!standalone.some((o) => o.role === "main") && combos.length === 0)
+    return null;
 
   const variables: Record<string, ModelVariable> = {};
   const x = standalone.map((option, i) => {
@@ -257,8 +265,22 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     }
   }
 
+  // Every meal has 1-2 mains (a combo counts as one), at most one side and one drink.
+  const ofRole = (role: RecommendableRole) =>
+    standalone.flatMap((o, i): [number, string][] =>
+      o.role === role ? [[1, x[i] as string]] : []
+    );
+  const mains = [
+    ...ofRole("main"),
+    ...y.map((name): [number, string] => [1, name])
+  ];
+  constraints.push(`min_mains: ${linear(mains)} >= 1`);
+  constraints.push(`max_mains: ${linear(mains)} <= ${MAX_MAINS}`);
+  for (const role of ["side", "drink"] as const) {
+    const terms = ofRole(role);
+    if (terms.length) constraints.push(`max_${role}s: ${linear(terms)} <= 1`);
+  }
   const counted = [...x, ...y].map((name): [number, string] => [1, name]);
-  constraints.push(`min_items: ${linear(counted)} >= 1`);
   constraints.push(`max_items: ${linear(counted)} <= ${MAX_ITEMS}`);
 
   const maxParts = Math.max(
@@ -266,7 +288,10 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     ...combos.map((c) => Math.max(c.base_count, c.entree_count))
   );
   const bounds = [
-    ...x.map((name) => ` 0 <= ${name} <= ${MAX_STANDALONE_QUANTITY}`),
+    ...x.map(
+      (name, i) =>
+        ` 0 <= ${name} <= ${standalone[i]?.role === "main" ? MAX_MAIN_QUANTITY : MAX_OTHER_QUANTITY}`
+    ),
     ...z.map((name) => ` 0 <= ${name} <= ${maxParts}`)
   ];
 
@@ -401,20 +426,37 @@ export function computeMealTargets(
 
 const money = (value: number) => `$${value.toFixed(2)}`;
 
-// One plain-English line built from the Macro Match breakdown.
+// One plain-English line built from the Macro Match result. It leads with the macro the user cares
+// about most: protein for "High protein", calories for "Lower calorie", the overall match for
+// "Balanced", and protein otherwise.
 export function explain(
-  breakdown: Recommendation["macro_match"]["breakdown"],
+  match: Recommendation["macro_match"],
   totalPrice: number,
-  budget: number
+  budget: number,
+  priorities: string[] = []
 ): string {
-  const protein = breakdown.protein_g;
-  const calories = breakdown.calories;
-  const nutrition =
-    protein.pct_of_target != null
-      ? `Covers ${protein.pct_of_target}% of your remaining protein for this meal`
-      : calories.pct_of_target != null
-        ? `Covers ${calories.pct_of_target}% of your remaining calories for this meal`
-        : "Fits your dietary filters";
+  const protein = match.breakdown.protein_g.pct_of_target;
+  const calories = match.breakdown.calories.pct_of_target;
+  const highProtein = priorities.includes("High protein");
+  const lowerCalorie = priorities.includes("Lower calorie");
+  const proteinLine = `Covers ${protein}% of your remaining protein for this meal`;
+  const calorieLine = `Uses ${calories}% of your remaining calories for this meal`;
+
+  let nutrition: string;
+  if (highProtein && lowerCalorie && protein != null && calories != null) {
+    nutrition = `Covers ${protein}% of your remaining protein with ${calories}% of your remaining calories`;
+  } else if (lowerCalorie && calories != null) {
+    nutrition = calorieLine;
+  } else if (!highProtein && priorities.includes("Balanced") && match.score != null) {
+    nutrition = `Balances your macros for this meal (Macro Match ${match.score})`;
+  } else if (protein != null) {
+    nutrition = proteinLine;
+  } else if (calories != null) {
+    nutrition = calorieLine;
+  } else {
+    nutrition = "Fits your dietary filters";
+  }
+
   const left = round(budget - totalPrice, 2);
   const spend =
     left > 0
@@ -423,14 +465,22 @@ export function explain(
   return `${nutrition} and ${spend}.`;
 }
 
+// Main item first: mains and entrees, then the combo base, sides, drinks; then larger
+// quantity, more calories, and name, so titles lead with what the meal is.
+const ROLE_ORDER = { main: 0, side: 2, drink: 3, dessert: 4, sauce: 5 } as const;
+const itemRank = (item: RecommendationItem) =>
+  item.combo_part === "base" ? 1 : ROLE_ORDER[item.meal_role];
+
 function toRecommendation(
   location: LocationRecord & { open_status: OpenStatus },
   model: BuiltModel,
   solution: ModelSolution,
   targets: MacroValues,
-  budget: number
+  budget: number,
+  priorities: string[]
 ): Recommendation {
   const items: RecommendationItem[] = [];
+  const calories = new Map<RecommendationItem, number>(); // for ordering only
   let combo: Recommendation["combo"] = null;
   let totalPrice = 0;
   const nutrition = Object.fromEntries(
@@ -458,9 +508,18 @@ function toRecommendation(
       name: option.name,
       quantity,
       unit_price: variable.kind === "item" ? variable.option.price : null,
-      combo_part: variable.kind === "component" ? variable.option.part : null
+      combo_part: variable.kind === "component" ? variable.option.part : null,
+      meal_role: variable.kind === "item" ? variable.option.role : "main"
     });
+    calories.set(items[items.length - 1] as RecommendationItem, option.nutrition.calories * quantity);
   }
+  items.sort(
+    (a, b) =>
+      itemRank(a) - itemRank(b) ||
+      b.quantity - a.quantity ||
+      (calories.get(b) ?? 0) - (calories.get(a) ?? 0) ||
+      a.name.localeCompare(b.name)
+  );
 
   const totals = Object.fromEntries(
     MACROS.map((m) => [m, round(nutrition[m], 1)])
@@ -480,7 +539,7 @@ function toRecommendation(
     nutrition: totals,
     targets,
     macro_match: match,
-    explanation: explain(match.breakdown, total, budget),
+    explanation: explain(match, total, budget, priorities),
     objective: solution.objective
   };
 }
@@ -502,7 +561,8 @@ export async function recommend(
   if (base.budget <= 0) return empty("over_daily_budget");
 
   const prefs = data.preferences ?? {};
-  const weights = objectiveWeights(prefs.nutrition_priorities ?? []);
+  const priorities = prefs.nutrition_priorities ?? [];
+  const weights = objectiveWeights(priorities);
   const preferred = new Set(prefs.preferred_location_ids ?? []);
   const skipped: SkippedLocation[] = [];
   const skip = (location: LocationRecord, reason: string) =>
@@ -553,8 +613,12 @@ export async function recommend(
         (o) => o.location_id === location.id
       );
       const nutrition = fullNutrition(item);
-      return offering && nutrition
-        ? [{ id: item.id, name: item.name, price: Number(offering.price), nutrition }]
+      // Desserts, sauces, and items without a role are never recommended.
+      const role = (RECOMMENDABLE_ROLES as readonly string[]).includes(item.meal_role ?? "")
+        ? (item.meal_role as RecommendableRole)
+        : null;
+      return offering && nutrition && role && !item.meal_component
+        ? [{ id: item.id, name: item.name, price: Number(offering.price), nutrition, role }]
         : [];
     });
     const components: ComponentOption[] = allowed.flatMap((item) => {
@@ -595,7 +659,7 @@ export async function recommend(
       weights
     });
     if (!model) {
-      skip(location, "No priced meals with nutrition info match your filters");
+      skip(location, "No priced main dish or combo with nutrition info matches your filters");
       continue;
     }
     const solution = await solveModel(model);
@@ -609,7 +673,7 @@ export async function recommend(
       continue;
     }
     recommendations.push(
-      toRecommendation(location, model, solution, base.targets, base.budget)
+      toRecommendation(location, model, solution, base.targets, base.budget, priorities)
     );
   }
 

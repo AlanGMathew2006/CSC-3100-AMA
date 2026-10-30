@@ -3,13 +3,16 @@
 //   CSV text -> parseCsv -> toItemRecords / toComboRecords (clean + validate) -> buildImportPlan (transform)
 //   dining_hours.json -> JSON.parse -> toHoursRecords (clean + validate) -> buildImportPlan
 //   serving_windows.json -> JSON.parse -> toServingWindowRules (clean + validate) -> applyServingWindows (filter)
+//   meal_roles.json -> JSON.parse -> toMealRoleRules (clean + validate) -> applyMealRoles (filter)
 // The load stage (writing to Supabase) lives in ../import-menu.ts.
 
 import {
   ALLERGENS,
   DAY_KEYS,
   DIETARY_TAGS,
+  MEAL_ROLES,
   parseClockTime,
+  type MealRole,
   type ServingWindows,
   type WeeklyHours
 } from "@csc-3100-ama/shared";
@@ -517,6 +520,7 @@ export interface MealRow {
   allergens_verified: boolean;
   allergen_source: string | null;
   serving_windows: ServingWindows; // null = whenever the location is open
+  meal_role: MealRole | null; // set by applyMealRoles; the import refuses rows without one
 }
 
 // Offerings reference meals and locations by natural key; the load stage swaps in the uuids.
@@ -602,7 +606,8 @@ export function buildImportPlan(
       tags: item.tags,
       allergens_verified: item.allergensVerified,
       allergen_source: item.allergenSource,
-      serving_windows: null
+      serving_windows: null,
+      meal_role: null
     });
 
     // Items without a standalone price (e.g. Panda entrees, sold only in combos) get no offering.
@@ -702,4 +707,86 @@ export function applyServingWindows(
     ...rules.overrides.map((o) => `override ${o.sourceId}`)
   ].filter((name) => !used.has(name));
   return { plan: { ...plan, meals, combos }, unmatched };
+}
+
+// ---------- Meal roles ----------
+
+export interface MealRoleRules {
+  rules: { restaurant: string; category: string; role: MealRole }[];
+  overrides: { sourceId: string; role: MealRole }[];
+}
+
+const isRole = (value: unknown): value is MealRole =>
+  typeof value === "string" && (MEAL_ROLES as readonly string[]).includes(value);
+
+// Parsed data/meal_roles.json -> rules by restaurant + category, overrides by source_id.
+export function toMealRoleRules(data: unknown): {
+  rules: MealRoleRules;
+  problems: Problem[];
+} {
+  const rules: MealRoleRules = { rules: [], overrides: [] };
+  const problems: Problem[] = [];
+  const record = (data ?? {}) as Record<string, unknown>;
+  const list = (key: string) => {
+    const value = record[key] ?? [];
+    if (Array.isArray(value)) return value as Record<string, unknown>[];
+    problems.push({ row: 0, id: key, message: `${key} must be an array` });
+    return [];
+  };
+  const str = (value: unknown) =>
+    typeof value === "string" ? text(value) : null;
+
+  const seenRules = new Set<string>();
+  list("rules").forEach((entry, index) => {
+    const fail = (message: string) =>
+      problems.push({ row: index + 1, id: "rules", message });
+    const restaurant = str(entry?.restaurant);
+    const category = str(entry?.category);
+    if (!restaurant || !category) return fail("restaurant and category are required");
+    if (!isRole(entry.role)) return fail(`unknown role "${String(entry.role)}"`);
+    const key = `${restaurant}|${category.toLowerCase()}`;
+    if (seenRules.has(key)) return fail("duplicate rule");
+    seenRules.add(key);
+    rules.rules.push({ restaurant, category, role: entry.role });
+  });
+  const seen = new Set<string>();
+  list("overrides").forEach((entry, index) => {
+    const fail = (message: string) =>
+      problems.push({ row: index + 1, id: "overrides", message });
+    const sourceId = str(entry?.source_id);
+    if (!sourceId) return fail("source_id is required");
+    if (!isRole(entry.role)) return fail(`unknown role "${String(entry.role)}"`);
+    if (seen.has(sourceId)) return fail("duplicate source_id");
+    seen.add(sourceId);
+    rules.overrides.push({ sourceId, role: entry.role });
+  });
+  return { rules, problems };
+}
+
+// Sets meal_role on every meal. `missing` lists meals no rule or override covers (the import
+// refuses to load those); `unmatched` lists overrides that point at no meal.
+export function applyMealRoles(
+  plan: ImportPlan,
+  rules: MealRoleRules
+): { plan: ImportPlan; missing: string[]; unmatched: string[] } {
+  const overrides = new Map(rules.overrides.map((o) => [o.sourceId, o.role]));
+  const meals = plan.meals.map((meal) => ({
+    ...meal,
+    meal_role:
+      overrides.get(meal.source_id) ??
+      rules.rules.find(
+        (r) =>
+          r.restaurant === meal.restaurant &&
+          r.category.toLowerCase() === meal.category.toLowerCase()
+      )?.role ??
+      null
+  }));
+  const ids = new Set(plan.meals.map((meal) => meal.source_id));
+  return {
+    plan: { ...plan, meals },
+    missing: meals.filter((m) => m.meal_role === null).map((m) => m.source_id),
+    unmatched: rules.overrides
+      .map((o) => o.sourceId)
+      .filter((id) => !ids.has(id))
+  };
 }

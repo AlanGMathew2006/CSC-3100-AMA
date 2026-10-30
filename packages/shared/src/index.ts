@@ -6,6 +6,10 @@ export * from "./hours.js";
 export * from "./macro-match.js";
 export * from "./recommendations.js";
 
+// What part of a meal an item is (meals.meal_role, from data/meal_roles.json).
+export const MEAL_ROLES = ["main", "side", "drink", "dessert", "sauce"] as const;
+export type MealRole = (typeof MEAL_ROLES)[number];
+
 export interface OnboardingInput {
   dining_dollars_balance: number;
   daily_spending_target: number;
@@ -47,6 +51,7 @@ export interface MenuItem {
   allergens?: string[];
   allergens_verified?: boolean;
   serving_windows?: ServingWindows;
+  meal_role?: MealRole | null;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
 }

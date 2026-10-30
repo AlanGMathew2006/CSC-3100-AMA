@@ -94,7 +94,7 @@ export async function getMenu(
       .from("meals")
       .select(
         "id, name, restaurant, category, serving, calories, protein_g, carbs_g, fat_g, meal_component, tags, " +
-          "allergens, allergens_verified, serving_windows, " +
+          "allergens, allergens_verified, serving_windows, meal_role, " +
           "offerings:menu_offerings(price, service_date, available, location:dining_locations(id, name, campus_area, hours))"
       )
       .not("restaurant", "is", null)

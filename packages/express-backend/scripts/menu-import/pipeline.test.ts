@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { load } from "./load.js";
 import {
+  applyMealRoles,
   applyServingWindows,
   buildImportPlan,
   parseCsv,
@@ -13,6 +14,7 @@ import {
   toComboRecords,
   toHoursRecords,
   toItemRecords,
+  toMealRoleRules,
   toServingWindowRules
 } from "./pipeline.js";
 
@@ -414,6 +416,60 @@ test("re-running the load with serving windows updates rows instead of duplicati
   assert.equal(combos[0]?.serving_windows, BREAKFAST);
 });
 
+test("toMealRoleRules validates roles, duplicates, and required fields", () => {
+  const { rules, problems } = toMealRoleRules({
+    rules: [
+      { restaurant: "Chick-fil-A", category: "Breakfast", role: "main" },
+      { restaurant: "Chick-fil-A", category: "breakfast", role: "side" },
+      { restaurant: "Chick-fil-A", category: "Desserts", role: "treat" },
+      { restaurant: "Chick-fil-A", role: "main" }
+    ],
+    overrides: [
+      { source_id: "cfa--fruit", role: "side" },
+      { source_id: "cfa--fruit", role: "side" },
+      { role: "side" }
+    ]
+  });
+  assert.equal(rules.rules.length, 1);
+  assert.equal(rules.overrides.length, 1);
+  assert.deepEqual(
+    problems.map((p) => p.message),
+    [
+      "duplicate rule",
+      'unknown role "treat"',
+      "restaurant and category are required",
+      "duplicate source_id",
+      "source_id is required"
+    ]
+  );
+});
+
+test("applyMealRoles uses category rules and overrides, and reports meals with no role", () => {
+  const { items } = toItemRecords(parseCsv(WINDOW_CSV));
+  const { rules } = toMealRoleRules({
+    rules: [
+      { restaurant: "Chick-fil-A", category: "Breakfast", role: "main" },
+      { restaurant: "Chick-fil-A", category: "Entrees", role: "main" }
+    ],
+    overrides: [
+      { source_id: "cfa--fruit", role: "side" },
+      { source_id: "cfa--gone", role: "side" }
+    ]
+  });
+  const { plan, missing, unmatched } = applyMealRoles(buildImportPlan(items, []), rules);
+  assert.deepEqual(
+    plan.meals.map((m) => [m.source_id, m.meal_role]),
+    [
+      ["cfa--biscuit", "main"],
+      ["cfa--fruit", "side"],
+      ["cfa--sandwich", "main"],
+      ["sw--egg", null]
+    ]
+  );
+  assert.deepEqual(missing, ["sw--egg"]);
+  assert.deepEqual(unmatched, ["cfa--gone"]);
+});
+
 test("the real data files import without problems", () => {
   const dataDir = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -487,6 +543,50 @@ test("the real data files import without problems", () => {
     windowed.plan.combos.filter((c) => c.serving_windows !== null).length,
     13
   );
+
+  // Every meal gets a role; the import refuses to run otherwise.
+  const roleRules = toMealRoleRules(
+    JSON.parse(readFileSync(path.join(dataDir, "meal_roles.json"), "utf8"))
+  );
+  assert.deepEqual(roleRules.problems, []);
+  const roles = applyMealRoles(windowed.plan, roleRules.rules);
+  assert.deepEqual(roles.missing, []);
+  assert.deepEqual(roles.unmatched, []);
+  const roleOf = (sourceId: string) =>
+    roles.plan.meals.find((m) => m.source_id === sourceId)?.meal_role;
+  assert.equal(roleOf("chick-fil-a--chick-fil-a-chicken-sandwich"), "main");
+  assert.equal(roleOf("chick-fil-a--spicy-chicken-biscuit"), "main");
+  for (const side of [
+    "chick-fil-a--hash-brown",
+    "chick-fil-a--fruit-cup",
+    "chick-fil-a--greek-yogurt-parfait",
+    "chick-fil-a--berry-parfait-with-cookie-crumbs",
+    "chick-fil-a--buttered-biscuit",
+    "chick-fil-a--english-muffin",
+    "chick-fil-a--mini-yeast-rolls-4-ct",
+    "subway--broccoli-cheddar-soup",
+    "panda-express--chicken-egg-roll"
+  ])
+    assert.equal(roleOf(side), "side", side);
+  for (const dessert of [
+    "chick-fil-a--frosted-coffee",
+    "chick-fil-a--chocolate-milkshake",
+    "chick-fil-a--float",
+    "chick-fil-a--frosted-soda",
+    "chick-fil-a--chocolate-chunk-cookie",
+    "subway--chocolate-chip-cookie",
+    "panda-express--apple-pie-roll",
+    "panda-express--fortune-cookie",
+    "taco-bell--cinnamon-twists"
+  ])
+    assert.equal(roleOf(dessert), "dessert", dessert);
+  assert.equal(roleOf("chick-fil-a--chick-fil-a-lemonade-medium"), "drink");
+  assert.equal(roleOf("chick-fil-a--polynesian-sauce"), "sauce");
+  assert.equal(roleOf("panda-express--soy-sauce"), "sauce");
+  assert.equal(roleOf("taco-bell--fire-sauce"), "sauce");
+  assert.equal(roleOf("taco-bell--crunchwrap-supreme"), "main");
+  assert.equal(roleOf("subway--tuna-footlong"), "main");
+  assert.equal(roleOf("subway--6-inch-egg-cheese"), "main");
   assert.deepEqual(
     hours.hours.map((h) => h.locationName).sort(),
     plan.locations.map((l) => l.name).sort()

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { MenuCombo, MenuItem } from "@csc-3100-ama/shared";
+import type { MealRole, MenuCombo, MenuItem } from "@csc-3100-ama/shared";
 import {
   buildModel,
   defaultMealsRemaining,
+  explain,
   mealBudget,
   mealTargets,
   objectiveWeights,
@@ -51,7 +52,8 @@ const item = (
     allergens = [],
     verified = true,
     component = null,
-    windows = null
+    windows = null,
+    role = "main"
   }: {
     price?: number;
     locationId?: string;
@@ -59,6 +61,7 @@ const item = (
     verified?: boolean;
     component?: "base" | "entree" | null;
     windows?: MenuItem["serving_windows"];
+    role?: MealRole;
   } = {}
 ): MenuItem => ({
   id,
@@ -75,6 +78,7 @@ const item = (
   allergens,
   allergens_verified: verified,
   serving_windows: windows,
+  meal_role: role,
   offerings:
     price == null || !locationId
       ? []
@@ -91,8 +95,8 @@ const item = (
         ]
 });
 
-const sub = (id: string, macros: [number, number, number, number], price: number, allergens: string[], verified = true) =>
-  item(id, "Subway", macros, { price, locationId: "loc-sub", allergens, verified });
+const sub = (id: string, macros: [number, number, number, number], price: number, allergens: string[], verified = true, role: MealRole = "main") =>
+  item(id, "Subway", macros, { price, locationId: "loc-sub", allergens, verified, role });
 const panda = (id: string, macros: [number, number, number, number], component: "base" | "entree", allergens: string[]) =>
   item(id, "Panda Express", macros, { component, allergens });
 
@@ -100,7 +104,9 @@ const ITEMS: MenuItem[] = [
   sub("sub-turkey", [280, 18, 46, 3.5], 8.29, ["wheat", "soy"]),
   sub("sub-veggie", [230, 9, 44, 2.5], 7.69, ["wheat"]),
   sub("sub-tuna", [480, 19, 45, 25], 8.19, ["egg", "fish", "wheat"]),
-  sub("sub-cookie", [220, 2, 30, 10], 0.99, ["milk", "egg", "wheat", "soy"]),
+  sub("sub-cookie", [220, 2, 30, 10], 0.99, ["milk", "egg", "wheat", "soy"], true, "dessert"),
+  sub("sub-chips", [230, 2, 30, 11], 1.49, [], true, "side"),
+  sub("sub-soda", [140, 0, 39, 0], 2.19, [], true, "drink"),
   sub("sub-meatball", [400, 20, 50, 15], 4.99, [], false),
   item("sub-mystery", "Subway", [null, 5, 5, 5], { price: 3, locationId: "loc-sub" }),
   panda("px-rice", [520, 11, 85, 16], "base", ["egg", "soy", "wheat"]),
@@ -111,7 +117,8 @@ const ITEMS: MenuItem[] = [
   item("px-eggroll", "Panda Express", [200, 6, 20, 10], {
     price: 2,
     locationId: "loc-panda",
-    allergens: ["wheat", "soy"]
+    allergens: ["wheat", "soy"],
+    role: "side"
   }),
   item("tb-bean", "Taco Bell", [350, 13, 54, 9], { price: 2.69, locationId: "loc-tb" }),
   item("cafe-bar", "Cafe", [200, 10, 20, 8], { price: 1, locationId: "loc-cafe" })
@@ -197,8 +204,8 @@ const nutrition = (calories: number, protein_g: number, carbs_g: number, fat_g: 
 test("buildModel writes the goal-programming MILP in CPLEX LP format", () => {
   const model = buildModel({
     standalone: [
-      { id: "b", name: "B", price: 4, nutrition: nutrition(400, 20, 40, 10) },
-      { id: "a", name: "A", price: 2, nutrition: nutrition(200, 10, 20, 5) }
+      { id: "b", name: "B", price: 4, nutrition: nutrition(400, 20, 40, 10), role: "main" },
+      { id: "a", name: "A", price: 2, nutrition: nutrition(200, 10, 20, 5), role: "side" }
     ],
     components: [
       { id: "rice", name: "Rice", part: "base", nutrition: nutrition(500, 10, 80, 15) },
@@ -231,9 +238,14 @@ test("buildModel writes the goal-programming MILP in CPLEX LP format", () => {
   assert.ok(lines.includes(" one_combo: 1 y0 <= 1"));
   assert.ok(lines.includes(" bases: 1 z1 - 1 y0 = 0"));
   assert.ok(lines.includes(" entrees: 1 z0 - 1 y0 = 0"));
-  assert.ok(lines.includes(" min_items: 1 x0 + 1 x1 + 1 y0 >= 1"));
+  // Roles: x1 (b) is the main, x0 (a) a side; the combo counts as a main.
+  assert.ok(lines.includes(" min_mains: 1 x1 + 1 y0 >= 1"));
+  assert.ok(lines.includes(" max_mains: 1 x1 + 1 y0 <= 2"));
+  assert.ok(lines.includes(" max_sides: 1 x0 <= 1"));
+  assert.ok(!model.lp.includes("max_drinks"), "no drinks -> no drink row");
   assert.ok(lines.includes(" max_items: 1 x0 + 1 x1 + 1 y0 <= 4"));
-  assert.ok(lines.includes(" 0 <= x0 <= 2"));
+  assert.ok(lines.includes(" 0 <= x0 <= 1"), "sides at most 1");
+  assert.ok(lines.includes(" 0 <= x1 <= 2"), "mains up to 2");
   assert.ok(lines.includes(" 0 <= z1 <= 1"));
   assert.deepEqual(lines.slice(-5), ["Generals", " x0 x1 z0 z1", "Binaries", " y0", "End"]);
 });
@@ -248,6 +260,15 @@ test("buildModel returns null with nothing to choose and drops combos without co
     weights: objectiveWeights([])
   };
   assert.equal(buildModel(empty), null);
+  // Sides and drinks alone can't make a meal.
+  assert.equal(
+    buildModel({
+      ...empty,
+      combos: [],
+      standalone: [{ id: "s", name: "S", price: 2, nutrition: nutrition(200, 5, 20, 5), role: "side" }]
+    }),
+    null
+  );
 });
 
 // ---------- Recommending (real HiGHS solver, mock data) ----------
@@ -378,8 +399,8 @@ test("a location whose filtered menu can't make any meal says so instead of blam
   assert.deepEqual(
     result.skipped.filter((s) => s.location_id === "loc-panda" || s.location_id === "loc-sub").map((s) => s.reason),
     [
-      "No priced meals with nutrition info match your filters",
-      "No priced meals with nutrition info match your filters"
+      "No priced main dish or combo with nutrition info matches your filters",
+      "No priced main dish or combo with nutrition info matches your filters"
     ]
   );
 });
@@ -434,4 +455,88 @@ test("items and combos with an unknown serving time are never recommended", asyn
     assert.ok(rec.items.every((i) => i.meal_id !== "sub-breakfast"));
     assert.equal(rec.combo, null);
   }
+});
+
+// ---------- Meal roles ----------
+
+const hasMainOrCombo = (rec: { combo: unknown; items: { meal_role: string; combo_part: unknown }[] }) =>
+  rec.combo !== null || rec.items.some((i) => i.meal_role === "main" && i.combo_part === null);
+
+test("desserts and a drink that fit the macros better than any main are still not a meal", async () => {
+  // Targets for 2 meals left: 750 / 40 / 95 / 25. Shake + cookie + drink hit them almost exactly.
+  const menu = {
+    items: [
+      item("cfa-sandwich", "Chick-fil-A", [440, 28, 41, 17], { price: 6.49, locationId: "loc-sub" }),
+      item("cfa-shake", "Chick-fil-A", [390, 20, 50, 13], { price: 5.65, locationId: "loc-sub", role: "dessert" }),
+      item("cfa-cookie", "Chick-fil-A", [220, 18, 15, 12], { price: 2.09, locationId: "loc-sub", role: "dessert" }),
+      item("cfa-milk", "Chick-fil-A", [140, 2, 30, 0], { price: 2.29, locationId: "loc-sub", role: "drink" }),
+      item("cfa-sauce", "Chick-fil-A", [140, 0, 7, 13], { price: 0.5, locationId: "loc-sub", role: "sauce" })
+    ],
+    combos: []
+  };
+  const result = await recommend(data({ menu }), { at: NOON_WED, locationId: "loc-sub" });
+  const rec = result.recommendations[0];
+  assert.ok(rec);
+  assert.ok(rec.items.some((i) => i.meal_id === "cfa-sandwich"));
+  assert.ok(rec.items.every((i) => i.meal_id !== "cfa-shake" && i.meal_id !== "cfa-cookie" && i.meal_id !== "cfa-sauce"));
+});
+
+test("every recommendation has a main or a combo and respects the role limits", async () => {
+  for (const prefs of [{}, { nutrition_priorities: ["High protein"] }, { nutrition_priorities: ["Lower calorie"] }, { allergens: ["milk"] }]) {
+    for (const spent of [0, 12, 18]) {
+      const result = await recommend(
+        data({ preferences: prefs, todayLogs: [{ price: spent, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }] }),
+        { at: NOON_WED, limit: 10 }
+      );
+      for (const rec of result.recommendations) {
+        assert.ok(hasMainOrCombo(rec), JSON.stringify(rec.items));
+        const count = (role: string) =>
+          rec.items.filter((i) => i.meal_role === role && i.combo_part === null).reduce((n, i) => n + i.quantity, 0);
+        assert.ok(count("main") + (rec.combo ? 1 : 0) <= 2);
+        assert.ok(count("side") <= 1);
+        assert.ok(count("drink") <= 1);
+        assert.equal(count("dessert") + count("sauce"), 0);
+        assert.ok(rec.items.filter((i) => i.meal_role !== "main").every((i) => i.quantity === 1));
+      }
+    }
+  }
+});
+
+test("items are listed main first", async () => {
+  const result = await recommend(data(), { at: NOON_WED, limit: 10 });
+  for (const rec of result.recommendations) {
+    const roles = rec.items.map((i) => (i.combo_part === "base" ? "base" : i.meal_role));
+    const order = ["main", "base", "side", "drink"];
+    assert.deepEqual(roles, [...roles].sort((a, b) => order.indexOf(a) - order.indexOf(b)));
+    assert.equal(rec.items[0]?.meal_role, "main");
+  }
+});
+
+test("the explanation leads with the macro the user's priorities care about", () => {
+  const match = {
+    score: 88,
+    breakdown: {
+      calories: { actual: 600, target: 750, pct_of_target: 80, status: "under" as const },
+      protein_g: { actual: 38, target: 40, pct_of_target: 95, status: "on_target" as const },
+      carbs_g: { actual: 90, target: 95, pct_of_target: 95, status: "on_target" as const },
+      fat_g: { actual: 20, target: 25, pct_of_target: 80, status: "under" as const }
+    }
+  };
+  assert.equal(
+    explain(match, 10, 20, ["High protein"]),
+    "Covers 95% of your remaining protein for this meal and stays $10.00 under today's budget."
+  );
+  assert.equal(
+    explain(match, 10, 20, ["Lower calorie"]),
+    "Uses 80% of your remaining calories for this meal and stays $10.00 under today's budget."
+  );
+  assert.equal(
+    explain(match, 20, 20, ["High protein", "Lower calorie"]),
+    "Covers 95% of your remaining protein with 80% of your remaining calories and uses the rest of today's budget."
+  );
+  assert.equal(
+    explain(match, 10, 20, ["Balanced"]),
+    "Balances your macros for this meal (Macro Match 88) and stays $10.00 under today's budget."
+  );
+  assert.match(explain(match, 10, 20, []), /^Covers 95% of your remaining protein/);
 });

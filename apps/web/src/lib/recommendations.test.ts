@@ -22,8 +22,8 @@ const rec = (overrides: Partial<Recommendation> = {}): Recommendation => ({
   location: { id: "loc", name: "Panda Express (1901 Marketplace)", campus_area: "1901 Marketplace", open_status: "open" },
   combo: { id: "plate", name: "Plate", price: 11.3 },
   items: [
-    { meal_id: "rice", name: "Fried Rice", quantity: 1, unit_price: null, combo_part: "base" },
-    { meal_id: "beef", name: "Broccoli Beef", quantity: 2, unit_price: null, combo_part: "entree" },
+    { meal_id: "rice", name: "Fried Rice", quantity: 1, unit_price: null, combo_part: "base", meal_role: "main" },
+    { meal_id: "beef", name: "Broccoli Beef", quantity: 2, unit_price: null, combo_part: "entree", meal_role: "main" },
   ],
   total_price: 11.3,
   nutrition: { calories: 820, protein_g: 29, carbs_g: 111, fat_g: 30 },
@@ -40,7 +40,7 @@ describe("recommendationLabel", () => {
   });
   it("joins standalone items without a combo", () => {
     assert.equal(
-      recommendationLabel(rec({ combo: null, items: [{ meal_id: "a", name: "Tuna", quantity: 1, unit_price: 8, combo_part: null }] })),
+      recommendationLabel(rec({ combo: null, items: [{ meal_id: "a", name: "Tuna", quantity: 1, unit_price: 8, combo_part: null, meal_role: "main" }] })),
       "Tuna",
     );
   });

@@ -169,6 +169,10 @@ alter table public.meals add column if not exists allergen_source text;
 -- null = whenever the location is open; otherwise the dining_locations.hours format or "unknown".
 alter table public.meals add column if not exists serving_windows jsonb;
 
+-- ============ Meal roles (Sprint 3, see migrations/20261101000000_meal_roles.sql) ============
+alter table public.meals add column if not exists meal_role text
+  check (meal_role in ('main', 'side', 'drink', 'dessert', 'sauce'));
+
 -- ============ Menu offerings: where the price came from ============
 alter table public.menu_offerings add column if not exists price_source text;
 
