@@ -4,6 +4,7 @@ import type { OpenStatus } from "./hours.js";
 export * from "./dietary.js";
 export * from "./hours.js";
 export * from "./macro-match.js";
+export * from "./recommendations.js";
 
 export interface OnboardingInput {
   dining_dollars_balance: number;

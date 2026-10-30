@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   diningClock,
+  startOfDiningDay,
   getOpenStatus,
   keepOpenOfferings,
   parseClockTime,
@@ -128,5 +129,22 @@ test("keepOpenOfferings drops closed locations but keeps unknown and combo-only 
   assert.deepEqual(
     keepOpenOfferings(items).map((item) => [item.id, item.offerings.length]),
     [["a", 1], ["c", 1], ["d", 0]],
+  );
+});
+
+test("startOfDiningDay is midnight in Los Angeles, across PDT and PST", () => {
+  // 02:30 UTC Oct 29 is 19:30 Oct 28 PDT -> midnight Oct 28 PDT = 07:00 UTC.
+  assert.equal(
+    startOfDiningDay(new Date("2026-10-29T02:30:00Z")).toISOString(),
+    "2026-10-28T07:00:00.000Z",
+  );
+  // After the Nov 1 switch to PST (UTC-8), midnight is 08:00 UTC.
+  assert.equal(
+    startOfDiningDay(new Date("2026-11-05T20:00:00Z")).toISOString(),
+    "2026-11-05T08:00:00.000Z",
+  );
+  assert.equal(
+    startOfDiningDay(la("2026-10-28T00:00")).toISOString(),
+    "2026-10-28T07:00:00.000Z",
   );
 });

@@ -128,6 +128,42 @@ consider:
 5. A balance of nutrition fit and Dining Dollar value—not simply
    the cheapest meal.
 
+# Recommendation algorithm
+
+Implemented in packages/express-backend/services/recommendation-service.ts
+(GET /api/recommendations). No AI: it is a small optimization model
+(the classic "diet problem"), solved with the open-source HiGHS solver
+(`highs` npm package, MIT, runs locally as WebAssembly).
+
+1. Targets for the next meal: what is left of today's calorie and
+   macro goals (goals minus today's meal logs, in Los Angeles time),
+   divided by the meals left today (3 before 11:00, 2 before 16:00,
+   then 1, unless the app passes meals_remaining).
+2. Budget: the smaller of the Dining Dollar balance and what is left
+   of today's spending target. No budget left means no
+   recommendations, with the reason "over_daily_budget".
+3. Candidates: locations that are open now (or whose hours are
+   unknown), take Dining Dollars, and match the preferred or chosen
+   location. Meals must have nutrition data, pass the dietary and
+   allergen filters (isMealAllowed), and have a price there, or be a
+   Panda base/entree used in a Bowl, Plate, or Bigger Plate.
+4. For each location the model picks whole quantities: up to 2 of each
+   priced item, at most one build-your-own combo with exactly its base
+   and entree count, 1 to 4 items in total, and never over the budget.
+   It minimizes how far the meal lands from each target (going under
+   and going over are each weighted, relative to the target) plus a
+   small cost term, so the answer is not simply the cheapest meal.
+   Nutrition priorities change the weights: "High protein" penalizes
+   too little protein more, "Lower calorie" penalizes extra calories
+   more, "Budget-friendly" raises the cost weight.
+5. Locations are ranked by that objective (ties: lower cost, then
+   name). Each result has the Macro Match score (0-100, see
+   packages/shared/src/macro-match.ts), a per-macro breakdown, and a
+   one-line explanation built from it.
+
+The same inputs always give the same output. Fixed-content combos
+(Panda #1-#6 Plates, Taco Bell and Chick-fil-A meals) are not used yet.
+
 # Data model expectations
 
 Use these core concepts consistently:

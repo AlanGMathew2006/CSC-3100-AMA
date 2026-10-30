@@ -44,6 +44,36 @@ export function diningClock(at: Date): { day: DayKey; minute: number } {
   return { day, minute: Number(parts.hour) * 60 + Number(parts.minute) };
 }
 
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: DINING_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+// The instant midnight began on `at`'s calendar day in America/Los_Angeles ("today" for meal logs).
+export function startOfDiningDay(at: Date): Date {
+  const parts = Object.fromEntries(
+    dateFormatter.formatToParts(at).map((part) => [part.type, Number(part.value)]),
+  ) as Record<string, number>;
+  const wallClockAsUtc = Date.UTC(
+    parts.year as number,
+    (parts.month as number) - 1,
+    parts.day as number,
+    parts.hour as number,
+    parts.minute as number,
+    parts.second as number,
+  );
+  const offsetMs = wallClockAsUtc - Math.floor(at.getTime() / 1000) * 1000;
+  return new Date(
+    Date.UTC(parts.year as number, (parts.month as number) - 1, parts.day as number) - offsetMs,
+  );
+}
+
 export function getOpenStatus(
   hours: WeeklyHours | null | undefined,
   at: Date,

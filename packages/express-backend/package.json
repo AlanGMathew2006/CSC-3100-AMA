@@ -15,10 +15,11 @@
     "test": "tsx --test scripts/**/*.test.ts services/**/*.test.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.3",
     "@csc-3100-ama/shared": "0.0.0",
+    "@supabase/supabase-js": "^2.117.3",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "highs": "^1.15.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
