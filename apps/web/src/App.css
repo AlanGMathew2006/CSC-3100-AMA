@@ -1736,6 +1736,53 @@ button.eye-icon {
   font-size: 11px;
 }
 
+.combo-card > .open-badge {
+  align-self: center;
+}
+
+.open-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.open-badge--open {
+  background: #b3e3d5;
+  color: #154734;
+}
+
+.open-badge--closed {
+  background: #f3dede;
+  color: #8a1c1c;
+}
+
+.open-badge--unknown {
+  border-color: #c5b783;
+  background: #fff;
+  color: #68736d;
+}
+
+html[data-theme="dark"] .open-badge--open {
+  background: var(--dark-raised);
+  color: var(--dark-green-bright);
+}
+
+html[data-theme="dark"] .open-badge--closed {
+  background: #3a1f1f;
+  color: #f0a9a9;
+}
+
+html[data-theme="dark"] .open-badge--unknown {
+  border-color: var(--dark-border);
+  background: transparent;
+  color: var(--dark-muted);
+}
+
 .saved-section,
 .saved-insight,
 .profile-setting-section,

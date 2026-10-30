@@ -1,4 +1,8 @@
 // Shared utilities and types used across apps/packages.
+import type { OpenStatus } from "./hours.js";
+
+export * from "./hours.js";
+
 export interface OnboardingInput {
   dining_dollars_balance: number;
   daily_spending_target: number;
@@ -18,6 +22,8 @@ export interface MenuOffering {
   campus_area: string | null;
   price: number;
   service_date: string;
+  // From the location's hours at request time; "unknown" when hours have not been collected.
+  open_status: OpenStatus;
 }
 
 export interface MenuItem {

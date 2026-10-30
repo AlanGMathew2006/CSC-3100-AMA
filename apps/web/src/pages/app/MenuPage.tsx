@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import type { MenuItem } from "@csc-3100-ama/shared";
+import { keepOpenOfferings, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { MealCard, mealPrice } from "../../components/MealCard";
+import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
@@ -24,6 +24,7 @@ export function MenuPage({
   const [filter, setFilter] = useState<Filter>("Location");
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterSelection, setFilterSelection] = useState("");
+  const [openNow, setOpenNow] = useState(false);
   const search = query.trim().toLowerCase();
 
   const locations = useMemo(() => {
@@ -35,8 +36,23 @@ export function MenuPage({
     }
     return [...byId.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [menu]);
+  // Open status comes from the server when the menu loads; filtering here avoids a refetch.
+  const locationStatuses = useMemo(() => {
+    const byId = new Map<string, { name: string; status: OpenStatus }>();
+    for (const item of menu?.items ?? []) {
+      for (const offering of item.offerings) {
+        byId.set(offering.location_id, {
+          name: offering.location_name,
+          status: offering.open_status,
+        });
+      }
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }, [menu]);
+  const unknownHoursCount = locationStatuses.filter((l) => l.status === "unknown").length;
   const items = useMemo(() => {
-    const filtered = (menu?.items ?? []).filter((item) => {
+    const available = openNow ? keepOpenOfferings(menu?.items ?? []) : (menu?.items ?? []);
+    const filtered = available.filter((item) => {
       const matchesSearch = `${item.name} ${item.category} ${item.restaurant}`
         .toLowerCase()
         .includes(search);
@@ -72,7 +88,7 @@ export function MenuPage({
       }
       return a.restaurant.localeCompare(b.restaurant);
     });
-  }, [filter, filterSelection, menu, search]);
+  }, [filter, filterSelection, menu, openNow, search]);
 
   const filterOptions = useMemo(() => {
     if (filter === "Location") {
@@ -139,6 +155,23 @@ export function MenuPage({
             </button>
           ))}
         </div>
+        <div className="explore-filters" role="group" aria-label="Availability">
+          <button
+            type="button"
+            className={`choice-chip${openNow ? " choice-chip--selected" : ""}`}
+            aria-pressed={openNow}
+            onClick={() => setOpenNow((current) => !current)}
+          >
+            Open now
+          </button>
+        </div>
+        {openNow && unknownHoursCount > 0 && (
+          <p className="field-helper" role="status">
+            {unknownHoursCount === locationStatuses.length
+              ? "Hours aren't available for any location yet, so every meal is still shown."
+              : `Hours aren't available for ${unknownHoursCount} location${unknownHoursCount === 1 ? "" : "s"}, so their meals are still shown.`}
+          </p>
+        )}
         {filterOpen && (
           <label className="filter-select-wrap">
             <span className="visually-hidden">Choose a {filter.toLowerCase()} filter</span>
@@ -161,6 +194,7 @@ export function MenuPage({
               <li key={item.id}>
                 <MealCard
                   item={item}
+                  showOpenStatus
                   saved={saved.isSaved(item.id)}
                   onSelect={() => onSelectMeal(item)}
                   onToggleSaved={() => void handleToggle(item)}
@@ -172,6 +206,18 @@ export function MenuPage({
           <p className="empty-card">
             {search ? `No meals match “${query.trim()}”.` : "No meals are available right now."}
           </p>
+        )}
+
+        {locationStatuses.length > 0 && (
+          <section className="combo-section" aria-labelledby="location-hours-heading">
+            <h2 id="location-hours-heading">Dining Locations</h2>
+            {locationStatuses.map((location) => (
+              <article className="combo-card" key={location.name}>
+                <strong>{location.name}</strong>
+                <OpenBadge status={location.status} />
+              </article>
+            ))}
+          </section>
         )}
 
         {menu && menu.combos.length > 0 && (

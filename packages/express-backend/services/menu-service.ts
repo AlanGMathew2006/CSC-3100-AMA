@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type {
-  MenuCombo,
-  MenuItem,
-  MenuOffering,
-  MenuResponse
+import {
+  getOpenStatus,
+  keepOpenOfferings,
+  type MenuCombo,
+  type MenuItem,
+  type MenuOffering,
+  type MenuResponse,
+  type WeeklyHours
 } from "@csc-3100-ama/shared";
 
 // Read-only access to the imported campus menu (meals, menu_offerings, menu_combos).
@@ -16,6 +19,7 @@ interface OfferingRow {
     id: string;
     name: string;
     campus_area: string | null;
+    hours?: WeeklyHours | null;
   } | null;
 }
 
@@ -23,9 +27,11 @@ type MealRow = Omit<MenuItem, "offerings"> & {
   offerings: OfferingRow[] | null;
 };
 
-// Keeps the most recent available offering for each location.
+// Keeps the most recent available offering for each location,
+// marked open/closed/unknown from the location's hours at `at`.
 export function latestOfferings(
-  rows: OfferingRow[]
+  rows: OfferingRow[],
+  at: Date = new Date()
 ): MenuOffering[] {
   const byLocation = new Map<string, MenuOffering>();
   for (const row of rows) {
@@ -38,7 +44,8 @@ export function latestOfferings(
       location_name: row.location.name,
       campus_area: row.location.campus_area,
       price: Number(row.price),
-      service_date: row.service_date
+      service_date: row.service_date,
+      open_status: getOpenStatus(row.location.hours, at)
     });
   }
   return [...byLocation.values()].sort((a, b) =>
@@ -46,15 +53,22 @@ export function latestOfferings(
   );
 }
 
+export interface MenuOptions {
+  // Drop offerings at closed locations; offerings with unknown hours are kept.
+  openNow?: boolean;
+  at?: Date;
+}
+
 export async function getMenu(
-  db: SupabaseClient
+  db: SupabaseClient,
+  { openNow = false, at = new Date() }: MenuOptions = {}
 ): Promise<MenuResponse> {
   const [meals, combos] = await Promise.all([
     db
       .from("meals")
       .select(
         "id, name, restaurant, category, serving, calories, protein_g, carbs_g, fat_g, meal_component, tags, " +
-          "offerings:menu_offerings(price, service_date, available, location:dining_locations(id, name, campus_area))"
+          "offerings:menu_offerings(price, service_date, available, location:dining_locations(id, name, campus_area, hours))"
       )
       .not("restaurant", "is", null)
       .order("restaurant")
@@ -74,8 +88,11 @@ export async function getMenu(
   const items = (meals.data as unknown as MealRow[]).map(
     ({ offerings, ...meal }) => ({
       ...meal,
-      offerings: latestOfferings(offerings ?? [])
+      offerings: latestOfferings(offerings ?? [], at)
     })
   );
-  return { items, combos: combos.data as MenuCombo[] };
+  return {
+    items: openNow ? keepOpenOfferings(items) : items,
+    combos: combos.data as MenuCombo[]
+  };
 }

@@ -1,7 +1,14 @@
 // Menu import pipeline (pipe and filter, see TE4).
 // Each stage is a pure function so it can be tested without Supabase:
 //   CSV text -> parseCsv -> toItemRecords / toComboRecords (clean + validate) -> buildImportPlan (transform)
+//   dining_hours.json -> JSON.parse -> toHoursRecords (clean + validate) -> buildImportPlan
 // The load stage (writing to Supabase) lives in ../import-menu.ts.
+
+import {
+  DAY_KEYS,
+  parseClockTime,
+  type WeeklyHours
+} from "@csc-3100-ama/shared";
 
 export type CsvRow = Record<string, string>;
 
@@ -266,6 +273,91 @@ export function toComboRecords(rows: CsvRow[]): {
   return { combos, problems };
 }
 
+export interface HoursRecord {
+  locationName: string;
+  hours: WeeklyHours | null; // null = not verified yet
+  source: string | null;
+  collectedOn: string | null;
+}
+
+// Checks one location's hours: all seven days present, each a list of HH:MM windows.
+function hoursProblem(hours: unknown): string | null {
+  if (typeof hours !== "object" || hours === null || Array.isArray(hours))
+    return "hours must be an object or null";
+  const record = hours as Record<string, unknown>;
+  const unknownDay = Object.keys(record).find(
+    (key) => !(DAY_KEYS as readonly string[]).includes(key)
+  );
+  if (unknownDay) return `unknown day "${unknownDay}"`;
+  for (const day of DAY_KEYS) {
+    const windows = record[day];
+    if (!Array.isArray(windows))
+      return `${day} is missing (use [] for a closed day)`;
+    for (const window of windows as Record<string, unknown>[]) {
+      if (
+        parseClockTime(window?.open) === null ||
+        parseClockTime(window?.close) === null
+      ) {
+        return `${day} has a window without valid HH:MM open/close times`;
+      }
+    }
+  }
+  return null;
+}
+
+// Parsed data/dining_hours.json -> one record per location name.
+// Invalid entries are reported and dropped, so that location's hours stay unknown.
+export function toHoursRecords(data: unknown): {
+  hours: HoursRecord[];
+  problems: Problem[];
+} {
+  const hours: HoursRecord[] = [];
+  const problems: Problem[] = [];
+  const list = (data as { locations?: unknown } | null)?.locations;
+  if (!Array.isArray(list)) {
+    problems.push({
+      row: 0,
+      id: "",
+      message: 'expected a top-level "locations" array'
+    });
+    return { hours, problems };
+  }
+  const seen = new Set<string>();
+
+  list.forEach((entry: Record<string, unknown>, index) => {
+    const name =
+      typeof entry?.name === "string" ? entry.name.trim() : "";
+    const fail = (message: string) =>
+      problems.push({ row: index + 1, id: name, message });
+
+    if (!name) return fail("missing name");
+    if (seen.has(name)) return fail("duplicate location");
+    const value = entry.hours ?? null;
+    if (value !== null) {
+      const problem = hoursProblem(value);
+      if (problem) return fail(problem);
+    }
+    const collectedOn =
+      typeof entry.collected_on === "string"
+        ? text(entry.collected_on)
+        : null;
+    if (value !== null && (!collectedOn || Number.isNaN(Date.parse(collectedOn))))
+      return fail("collected_on is missing or not a date");
+    if (value !== null && typeof entry.source !== "string")
+      return fail("source is required when hours are set");
+
+    seen.add(name);
+    hours.push({
+      locationName: name,
+      hours: value as WeeklyHours | null,
+      source: typeof entry.source === "string" ? text(entry.source) : null,
+      collectedOn: collectedOn?.slice(0, 10) ?? null
+    });
+  });
+
+  return { hours, problems };
+}
+
 // ---------- Stage 3: transform into database rows ----------
 
 export interface LocationRow {
@@ -274,6 +366,7 @@ export interface LocationRow {
   campus_area: string;
   description: string;
   accepts_dining_dollars: boolean;
+  hours: WeeklyHours; // {} = unknown
 }
 
 export interface MealRow {
@@ -318,6 +411,8 @@ export interface ImportPlan {
   offerings: OfferingRow[];
   combos: ComboRow[];
   unpricedMeals: number;
+  locationsWithoutHours: string[];
+  unmatchedHours: string[]; // names in dining_hours.json with no matching location
 }
 
 export const locationName = (
@@ -327,8 +422,12 @@ export const locationName = (
 
 export function buildImportPlan(
   items: ItemRecord[],
-  combos: ComboRecord[]
+  combos: ComboRecord[],
+  hours: HoursRecord[] = []
 ): ImportPlan {
+  const hoursByName = new Map(
+    hours.map((record) => [record.locationName, record.hours])
+  );
   const locations = new Map<string, LocationRow>();
   const meals: MealRow[] = [];
   const offerings: OfferingRow[] = [];
@@ -343,7 +442,9 @@ export function buildImportPlan(
           restaurant: item.restaurant,
           campus_area: area,
           description: `${item.restaurant} at ${area}`,
-          accepts_dining_dollars: true
+          accepts_dining_dollars: true,
+          // Always written, so re-importing a null entry clears stale hours.
+          hours: hoursByName.get(name) ?? {}
         });
       }
     }
@@ -394,6 +495,12 @@ export function buildImportPlan(
       price: combo.price,
       price_source: combo.priceSource
     })),
-    unpricedMeals
+    unpricedMeals,
+    locationsWithoutHours: [...locations.values()]
+      .filter((location) => Object.keys(location.hours).length === 0)
+      .map((location) => location.name),
+    unmatchedHours: hours
+      .map((record) => record.locationName)
+      .filter((name) => !locations.has(name))
   };
 }
