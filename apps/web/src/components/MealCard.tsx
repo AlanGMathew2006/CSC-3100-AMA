@@ -1,4 +1,5 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import { listedLocation } from "../lib/locations";
 import { servingLabel, servingStatusText } from "../lib/serving";
 import { macroScoreText } from "./MacroMatch";
 
@@ -44,10 +45,10 @@ export function MealCard({
   onToggleSaved: () => void;
 }) {
   const price = mealPrice(item);
-  const offering = cheapestOffering(item);
+  const listed = listedLocation(item);
   const serving = showOpenStatus ? servingLabel(item) : null;
   const servingStatus = showOpenStatus
-    ? servingStatusText(item.serving_windows, offering?.availability)
+    ? servingStatusText(item.serving_windows, listed.availability ?? undefined)
     : null;
 
   return (
@@ -55,9 +56,9 @@ export function MealCard({
       <button type="button" className="meal-card-main" onClick={onSelect}>
         <span className="meal-card-heading">
           <span className="meal-label">
-            {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+            {listed.label}
           </span>
-          {showOpenStatus && offering && <OpenBadge status={offering.open_status} />}
+          {showOpenStatus && listed.open_status && <OpenBadge status={listed.open_status} />}
           {serving && (
             <span className="meal-label">
               {serving}

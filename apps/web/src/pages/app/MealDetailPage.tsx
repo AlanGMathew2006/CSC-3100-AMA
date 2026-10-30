@@ -2,6 +2,7 @@ import { macroMatch, type MenuItem } from "@csc-3100-ama/shared";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useMealTargets } from "../../hooks/useRecommendations";
 import { allergenLabel } from "../../lib/allergens";
+import { listedLocation } from "../../lib/locations";
 import { servingLabel, servingStatusText } from "../../lib/serving";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
@@ -28,6 +29,8 @@ export function MealDetailPage({
   const saved = savedMeals.isSaved(item.id);
   const price = mealPrice(item);
   const offering = cheapestOffering(item);
+  // For unpriced items this is the restaurant's location (e.g. 1901 Marketplace), not "Chick-fil-A".
+  const listed = listedLocation(item);
   const picture = item.name.toLowerCase().includes("chicken rice bowl")
     ? "/assets/figma/chicken-rice-bowl.jpg"
     : null;
@@ -71,7 +74,7 @@ export function MealDetailPage({
               </div>
             )}
             <span className="detail-venue-chip">
-              {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+              {listed.label}
             </span>
             <button
               type="button"
@@ -99,13 +102,13 @@ export function MealDetailPage({
             <div>
               <h1>{item.name}</h1>
               <p className="detail-location">
-                <span /> {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+                <span /> {listed.label}
               </p>
               {servingLabel(item) && (
                 <p className="field-helper">
                   {servingLabel(item)}
-                  {servingStatusText(item.serving_windows, offering?.availability) &&
-                    ` · ${servingStatusText(item.serving_windows, offering?.availability)}`}
+                  {servingStatusText(item.serving_windows, listed.availability ?? undefined) &&
+                    ` · ${servingStatusText(item.serving_windows, listed.availability ?? undefined)}`}
                 </p>
               )}
             </div>

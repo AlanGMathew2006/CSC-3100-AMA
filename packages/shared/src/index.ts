@@ -35,6 +35,15 @@ export interface MenuOffering {
   availability: ItemAvailability;
 }
 
+// A dining location an item without its own offering is sold at (same restaurant), with its status.
+export interface MenuLocationStatus {
+  location_id: string;
+  location_name: string;
+  campus_area: string | null;
+  open_status: OpenStatus;
+  availability: ItemAvailability;
+}
+
 export interface MenuItem {
   id: string;
   name: string;
@@ -54,6 +63,10 @@ export interface MenuItem {
   meal_role?: MealRole | null;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
+  // Only for items with no offerings: the restaurant's locations, best availability first,
+  // and the item's availability across them (location hours + serving window).
+  restaurant_locations?: MenuLocationStatus[];
+  availability?: ItemAvailability;
 }
 
 export interface MenuCombo {
@@ -67,6 +80,7 @@ export interface MenuCombo {
   serving_windows?: ServingWindows;
   // Across the restaurant's locations: available if any is serving it now.
   availability?: ItemAvailability;
+  locations?: MenuLocationStatus[];
 }
 
 export interface MenuResponse {

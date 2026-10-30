@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  combineAvailability,
   diningClock,
   getItemAvailability,
   startOfDiningDay,
@@ -126,10 +127,12 @@ test("keepOpenOfferings drops offerings not served now but keeps unknown and com
     { id: "b", offerings: [{ availability: "not_now" as const }] },
     { id: "c", offerings: [{ availability: "unknown" as const }] },
     { id: "d", offerings: [] },
+    { id: "e", offerings: [], availability: "not_now" as const },
+    { id: "f", offerings: [], availability: "available" as const },
   ];
   assert.deepEqual(
     keepOpenOfferings(items).map((item) => [item.id, item.offerings.length]),
-    [["a", 1], ["c", 1], ["d", 0]],
+    [["a", 1], ["c", 1], ["d", 0], ["f", 0]],
   );
 });
 
@@ -201,4 +204,17 @@ test("unknown location hours give unknown unless the item window is definitely c
   assert.equal(getItemAvailability(null, {}, la("2026-10-26T13:00")), "unknown");
   assert.equal(getItemAvailability(breakfast, null, la("2026-10-26T09:00")), "unknown");
   assert.equal(getItemAvailability(breakfast, null, la("2026-10-26T13:00")), "not_now");
+});
+
+test("a closed item window is not_now even when no location is known at all", () => {
+  assert.equal(getItemAvailability(breakfast, undefined, la("2026-10-26T13:00")), "not_now");
+  assert.equal(getItemAvailability(breakfast, undefined, la("2026-10-26T09:00")), "unknown");
+  assert.equal(getItemAvailability(null, undefined, la("2026-10-26T13:00")), "unknown");
+});
+
+test("combineAvailability picks the best location", () => {
+  assert.equal(combineAvailability(["not_now", "unknown"]), "unknown");
+  assert.equal(combineAvailability(["not_now", "available"]), "available");
+  assert.equal(combineAvailability(["not_now"]), "not_now");
+  assert.equal(combineAvailability([]), null);
 });

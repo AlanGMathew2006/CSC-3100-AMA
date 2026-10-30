@@ -33,7 +33,7 @@ export function MenuPage({
   const locations = useMemo(() => {
     const byId = new Map<string, string>();
     for (const item of menu?.items ?? []) {
-      for (const offering of item.offerings) {
+      for (const offering of [...item.offerings, ...(item.restaurant_locations ?? [])]) {
         byId.set(offering.location_id, offering.campus_area ?? offering.location_name);
       }
     }
@@ -43,7 +43,7 @@ export function MenuPage({
   const locationStatuses = useMemo(() => {
     const byId = new Map<string, { name: string; status: OpenStatus }>();
     for (const item of menu?.items ?? []) {
-      for (const offering of item.offerings) {
+      for (const offering of [...item.offerings, ...(item.restaurant_locations ?? [])]) {
         byId.set(offering.location_id, {
           name: offering.location_name,
           status: offering.open_status,
@@ -66,7 +66,7 @@ export function MenuPage({
       if (!matchesSearch) return false;
       if (!filterSelection) return true;
       if (filterSelection.startsWith("location:")) {
-        return item.offerings.some(
+        return [...item.offerings, ...(item.restaurant_locations ?? [])].some(
           (offering) => offering.location_id === filterSelection.slice("location:".length),
         );
       }
@@ -236,7 +236,11 @@ export function MenuPage({
             {combos.map((combo) => (
               <article className="combo-card" key={combo.id}>
                 <div>
-                  <span className="meal-label">{combo.restaurant}</span>
+                  <span className="meal-label">
+                    {combo.locations?.[0]
+                      ? `${combo.restaurant} · ${combo.locations[0].campus_area ?? combo.locations[0].location_name}`
+                      : combo.restaurant}
+                  </span>
                   <strong>{combo.name}</strong>
                   {servingLabel(combo) && (
                     <span className="meal-label">

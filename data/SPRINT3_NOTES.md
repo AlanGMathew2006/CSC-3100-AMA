@@ -34,6 +34,7 @@ Before every commit these all passed: `npm run build`, `npm run lint`, `npm test
   dining_hours.json each quarter.
 - `packages/shared` is now `"type": "module"` so the compiled backend can import runtime code from it.
 - Panda combo-only items have no location offering, so the open-now filter doesn't hide them.
+  (Fixed later on sprint3/macro-match: unpriced items now use their restaurant's location.)
 - No schema change: `dining_locations.hours` already exists.
 - Location hours only say when a location is open, not when each item is served. Breakfast-only
   items are handled separately by item serving windows (`data/serving_windows.json`, migration
@@ -116,6 +117,9 @@ Run the migration in the Supabase SQL editor before deploying this backend: GET 
   combined allergens, Add to Today). Tapping an item opens its own details. "Best options" no longer
   repeats the hero pick, and multi-item cards have no bookmark.
 - The explanation line leads with the macro the user's priorities care about.
+- Items with no offering of their own (unpriced items, Panda combo-only bases/entrees) and combos use
+  their restaurant's dining location for the location label, Open/Closed badge and availability, so
+  "Open now" hides an unpriced breakfast item after 10:30.
 
 ## Notes
 - Deterministic: inputs sorted by id; ties by objective, then cost, then location name.
@@ -314,6 +318,29 @@ Sample run on the real data (2000 cal / 150 g protein / 200 g carbs / 65 g fat, 
 
 Taco Bell was skipped (closed until 16:00).
 
+## Follow-up: availability of unpriced items
+
+Commit "Use restaurant locations for availability of unpriced items" on sprint3/macro-match. **No
+migration needed.** It only reads columns that already exist (`dining_locations.id, name,
+restaurant, campus_area, hours`).
+
+- **Bug:** with "Open now" on at 13:28 on a weekday, Explore still showed "Chicken, Egg & Cheese
+  Biscuit" (Chick-fil-A breakfast). The card was labeled "CHICK-FIL-A", showed "Price unavailable", and
+  had no badge. Availability came only from menu_offerings, so items without a price came back
+  "unknown" and "Open now" kept them.
+- **Fix:** for an item with no offerings, GET /api/menu now returns `restaurant_locations`: the
+  dining_locations rows with the same restaurant, each with open_status and availability, best first.
+  The item also gets an item-level `availability`. Combos get the same `locations` list. The card and
+  detail page take the location label and Open/Closed badge from there, and "Open now" uses the
+  item-level availability.
+- **No known location:** a closed serving window still gives "not_now".
+- **Panda combo-only parts** keep "Price unavailable" and stay available while Panda is open.
+- **Explore's Location filter** now also matches unpriced items by their restaurant's location.
+- **Effect at 13:00 on a weekday (Wed Nov 4):** "Open now" hides **54** of 192 items, up from **38**.
+  The extra 16 are all unpriced: Chicken, Egg & Cheese Biscuit and 15 unpriced Taco Bell items (Taco
+  Bell opens at 16:00). Combos hidden: 23 of 41 before and after. On Saturday at 13:00, 74 items and
+  32 combos are hidden (Panda is closed).
+
 ## 3. Remaining manual steps
 
 1. **Supabase SQL editor**, in this order:
@@ -338,8 +365,11 @@ Taco Bell was skipped (closed until 16:00).
 
 ## 4. WIP or failing
 
-Nothing is failing; no WIP commits. Known gaps (not bugs): fixed-content combos aren't used by the
-optimizer, and the open-now filter doesn't hide combo-only Panda items.
+Nothing is failing; no WIP commits. Known gap (not a bug): fixed-content combos (Panda #1-#6 Plates,
+Taco Bell and Chick-fil-A meals) aren't used by the optimizer yet.
+
+Fixed: "Open now" used to keep unpriced items (unpriced Chick-fil-A breakfast items, unpriced Taco Bell
+items, Panda combo-only bases/entrees), because they had no offering to compute availability from.
 
 ## 5. Two-minute demo script (sprint review)
 

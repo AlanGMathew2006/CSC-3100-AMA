@@ -139,14 +139,29 @@ export function getItemAvailability(
   return "available";
 }
 
+const AVAILABILITY_RANK: Record<ItemAvailability, number> = { available: 0, unknown: 1, not_now: 2 };
+
+// Best of several locations' availability (available > unknown > not_now); null for none.
+export function combineAvailability(statuses: ItemAvailability[]): ItemAvailability | null {
+  return statuses.reduce<ItemAvailability | null>(
+    (best, status) =>
+      best === null || AVAILABILITY_RANK[status] < AVAILABILITY_RANK[best] ? status : best,
+    null,
+  );
+}
+
+export const compareAvailability = (a: ItemAvailability, b: ItemAvailability) =>
+  AVAILABILITY_RANK[a] - AVAILABILITY_RANK[b];
+
 // Drops offerings that aren't served right now (closed location or outside the item's serving
-// window); "unknown" ones stay, marked by `availability`. Items left with no offerings are dropped,
-// but items that never had one (combo-only) are kept.
+// window); "unknown" ones stay, marked by `availability`. Items left with no offerings are dropped.
+// Items that never had an offering (unpriced, combo-only) use their item-level `availability`,
+// which comes from their restaurant's locations.
 export function keepOpenOfferings<
-  T extends { offerings: { availability: ItemAvailability }[] },
+  T extends { offerings: { availability: ItemAvailability }[]; availability?: ItemAvailability },
 >(items: T[]): T[] {
   return items.flatMap((item) => {
-    if (item.offerings.length === 0) return [item];
+    if (item.offerings.length === 0) return item.availability === "not_now" ? [] : [item];
     const offerings = item.offerings.filter((o) => o.availability !== "not_now");
     return offerings.length ? [{ ...item, offerings }] : [];
   });
