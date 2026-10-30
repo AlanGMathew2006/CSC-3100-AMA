@@ -1,14 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MenuItem } from "@csc-3100-ama/shared";
+import type { MenuItem, Recommendation } from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { cheapestOffering, MealCard, mealPrice } from "../../components/MealCard";
+import { MacroMatchSummary, macroScoreText } from "../../components/MacroMatch";
+import { MealCard } from "../../components/MealCard";
 import { useDashboard } from "../../hooks/useDashboard";
 import { useMenu } from "../../hooks/useMenu";
+import { useRecommendations } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
+import {
+  NO_RECOMMENDATION_MESSAGES,
+  recommendationAsMenuItem,
+  recommendationLog,
+} from "../../lib/recommendations";
 import type { UserPreferences } from "../../types/dashboard";
 import { NutritionSheet } from "./NutritionSheet";
 
@@ -26,15 +33,19 @@ function greeting(): string {
 export function DashboardPage({
   onNavigate,
   onSelectMeal,
+  onSelectRecommendation,
   onToast,
 }: {
   onNavigate: (tab: AppTab) => void;
   onSelectMeal: (item: MenuItem) => void;
+  onSelectRecommendation: (rec: Recommendation) => void;
   onToast: (message: string) => void;
 }) {
   const { user } = useAuth();
   const { data, error, logging, reload, addMeal } = useDashboard();
   const menu = useMenu();
+  // The hero pick plus up to 3 more for "Best options".
+  const recs = useRecommendations({ limit: 4 });
   const saved = useSavedMeals();
   const [view, setView] = useState<"daily" | "weekly">("daily");
   const [selectedNutrient, setSelectedNutrient] = useState<NutrientKey | null>(null);
@@ -79,26 +90,22 @@ export function DashboardPage({
     user?.email?.split("@")[0] ||
     "Student";
 
-  const recommendations = useMemo(() => {
-    const items = [...(menu.menu?.items ?? [])];
-    const priorities = preferences?.nutrition_priorities ?? [];
-    const preferredLocations = new Set(preferences?.preferred_location_ids ?? []);
-    const score = (item: MenuItem) => {
-      let value = 0;
-      if (preferredLocations.size && item.offerings.some((offering) => preferredLocations.has(offering.location_id))) value -= 100;
-      if (priorities.includes("High protein")) value -= item.protein_g ?? 0;
-      if (priorities.includes("Lower calorie")) value += item.calories ?? 10000;
-      if (priorities.includes("Budget-friendly")) value += (mealPrice(item) ?? 10000) * 10;
-      if (priorities.includes("Balanced")) {
-        const calorieGoal = data?.goals?.calories ?? 2000;
-        const proteinGoal = data?.goals?.protein_g ?? 100;
-        value += Math.abs((item.calories ?? calorieGoal) - calorieGoal) / Math.max(calorieGoal, 1);
-        value += Math.abs((item.protein_g ?? proteinGoal) - proteinGoal) / Math.max(proteinGoal, 1);
-      }
-      return value;
-    };
-    return items.sort((a, b) => score(a) - score(b)).slice(0, 3);
-  }, [data?.goals, menu.menu, preferences]);
+  // Ranked by the optimizer (GET /api/recommendations); each is shown through the existing MealCard.
+  // `item` is the whole recommendation for display. A single-item recommendation opens and saves
+  // that meal; a multi-item one opens the recommendation view and has no bookmark.
+  const recommendations = useMemo(
+    () =>
+      (recs.data?.recommendations ?? []).flatMap((rec) => {
+        const items = menu.menu?.items ?? [];
+        const item = recommendationAsMenuItem(rec, items);
+        const meal = item && items.find((candidate) => candidate.id === item.id);
+        const single = !rec.combo && rec.items.length === 1;
+        return item && meal ? [{ rec, item, meal, single }] : [];
+      }),
+    [recs.data, menu.menu],
+  );
+  const openRecommendation = ({ rec, meal, single }: (typeof recommendations)[number]) =>
+    single ? onSelectMeal(meal) : onSelectRecommendation(rec);
   const weeklyDays = useMemo(() => {
     const today = new Date();
     const mondayOffset = (today.getDay() + 6) % 7;
@@ -125,21 +132,11 @@ export function DashboardPage({
     1,
   );
 
-  async function handleAddMeal(item: MenuItem) {
-    const price = mealPrice(item);
-    const offering = cheapestOffering(item);
-    const succeeded = await addMeal({
-      meal_id: item.id,
-      location_id: offering?.location_id,
-      name: item.name,
-      location_name: offering?.location_name ?? item.restaurant,
-      price: price ?? 0,
-      calories: item.calories ?? 0,
-      protein_g: item.protein_g ?? 0,
-      carbs_g: item.carbs_g ?? 0,
-      fat_g: item.fat_g ?? 0,
-    });
-    if (succeeded) onToast("Meal added to today");
+  async function handleAddMeal({ rec }: { rec: Recommendation }) {
+    if (await addMeal(recommendationLog(rec))) {
+      onToast("Meal added to today");
+      void recs.reload();
+    }
   }
 
   async function toggleSaved(item: MenuItem) {
@@ -181,6 +178,14 @@ export function DashboardPage({
           </p>
         )}
         {menu.error && <p className="field-helper error" role="alert">{menu.error}</p>}
+        {recs.error && (
+          <p className="field-helper error" role="alert">
+            {recs.error}{" "}
+            <button type="button" className="link-button" onClick={() => void recs.reload()}>
+              Retry
+            </button>
+          </p>
+        )}
         {saved.error && <p className="field-helper error" role="alert">{saved.error}</p>}
         {preferencesError && <p className="field-helper error" role="alert">{preferencesError}</p>}
         <div className="toggle-pill" aria-label="Daily or weekly view">
@@ -298,21 +303,27 @@ export function DashboardPage({
           )}
         </section>
 
-        {menu.loading && !menu.menu && (
+        {(recs.loading || menu.loading) && recommendations.length === 0 && (
           <p className="field-helper success" role="status">Loading meal recommendations…</p>
         )}
-        {recommendations.length > 0 && (
+        {!recs.loading && recs.data?.reason && (
+          <p className="empty-card">{NO_RECOMMENDATION_MESSAGES[recs.data.reason]}</p>
+        )}
+        {recommendations[0] && (
           <>
             <section className="recommend-card">
               <h2>What should I eat next?</h2>
               <MealCard
-                item={recommendations[0]}
-                saved={saved.isSaved(recommendations[0].id)}
-                onSelect={() => onSelectMeal(recommendations[0])}
-                onToggleSaved={() => void toggleSaved(recommendations[0])}
+                item={recommendations[0].item}
+                saved={saved.isSaved(recommendations[0].item.id)}
+                hideBookmark={!recommendations[0].single}
+                onSelect={() => openRecommendation(recommendations[0])}
+                onToggleSaved={() => void toggleSaved(recommendations[0].meal)}
               />
+              <p className="recommend-explanation">{recommendations[0].rec.explanation}</p>
+              <MacroMatchSummary match={recommendations[0].rec.macro_match} />
               <div className="meal-actions">
-                <button type="button" className="text-link" onClick={() => onSelectMeal(recommendations[0])}>
+                <button type="button" className="text-link" onClick={() => openRecommendation(recommendations[0])}>
                   View Meal
                 </button>
                 <button
@@ -325,18 +336,26 @@ export function DashboardPage({
                 </button>
               </div>
             </section>
+            {recommendations.length > 1 && (
             <section className="recommend-options">
               <h2>Best options for you today</h2>
-              {recommendations.map((item) => (
-                <MealCard
-                  key={item.id}
-                  item={item}
-                  saved={saved.isSaved(item.id)}
-                  onSelect={() => onSelectMeal(item)}
-                  onToggleSaved={() => void toggleSaved(item)}
-                />
+              {/* The hero pick is shown above, so this lists the next best options. */}
+              {recommendations.slice(1).map((entry) => (
+                <div key={entry.rec.location.id}>
+                  <MealCard
+                    item={entry.item}
+                    saved={saved.isSaved(entry.item.id)}
+                    hideBookmark={!entry.single}
+                    onSelect={() => openRecommendation(entry)}
+                    onToggleSaved={() => void toggleSaved(entry.meal)}
+                  />
+                  <p className="recommend-explanation">
+                    {macroScoreText(entry.rec.macro_match.score)} · {entry.rec.explanation}
+                  </p>
+                </div>
               ))}
             </section>
+            )}
           </>
         )}
       </main>

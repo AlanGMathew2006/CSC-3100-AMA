@@ -7,6 +7,19 @@ from `packages/express-backend` (re-running is safe, it upserts), then tick the 
 Dining hours: done (`data/dining_hours.json`, regular-week hours collected 2026-10-30).
 Re-check them at the start of each quarter and before breaks.
 
+## Item serving windows (`data/serving_windows.json`)
+
+- [ ] Subway breakfast cutoff (PCV and Kennedy Library). The cutoff varies by franchise and neither
+  campus Subway lists one, so the 4 Subway "Breakfast" items have `"windows": "unknown"`. Explore
+  shows "Serving time unknown" and they are never recommended. Ask each store or check the Grubhub
+  campus app, then replace "unknown" in the Subway meal rule with the per-day windows (e.g. every day
+  `{"open": "00:00", "close": "10:30"}`), a source, and a `verified` note. If the two stores differ,
+  add overrides by `source_id`. Note that the import file matches meals by restaurant, not location.
+- [ ] Confirm the Chick-fil-A breakfast cutoff at the campus store. 10:30 is the chain-wide time from
+  chick-fil-a.com; the Cal Poly menu lists no breakfast times.
+- [ ] Check Chick-fil-A "Mini Yeast Rolls (4 ct)". It is in the Breakfast category so it gets the
+  breakfast window, but it may be sold all day. If so, add an override with `"windows": null`.
+
 ## Missing prices (`price_usd` in `data/menu_items.csv`)
 
 47 items have no `price_usd`. They import as meals with no offering, so the app shows

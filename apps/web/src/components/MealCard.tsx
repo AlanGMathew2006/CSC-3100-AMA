@@ -1,4 +1,7 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import { listedLocation } from "../lib/locations";
+import { servingLabel, servingStatusText } from "../lib/serving";
+import { macroScoreText } from "./MacroMatch";
 
 export const cheapestOffering = (item: MenuItem) =>
   item.offerings.reduce<(typeof item.offerings)[number] | null>(
@@ -24,27 +27,47 @@ export function MealCard({
   item,
   saved,
   showOpenStatus = false,
+  macroScore,
+  hideBookmark = false,
   onSelect,
   onToggleSaved,
 }: {
   item: MenuItem;
   saved: boolean;
-  // Shows whether the location of the listed (cheapest) offering is open now.
+  // Shows whether the location of the listed (cheapest) offering is open now, and the item's
+  // serving window (e.g. "Breakfast · until 10:30 am") with "Not served right now" after it.
   showOpenStatus?: boolean;
+  // Macro Match against the next meal's targets; omit to hide, null shows "unavailable".
+  macroScore?: number | null;
+  // For multi-item recommendations, where saving one item would be misleading.
+  hideBookmark?: boolean;
   onSelect: () => void;
   onToggleSaved: () => void;
 }) {
   const price = mealPrice(item);
-  const offering = cheapestOffering(item);
+  const listed = listedLocation(item);
+  const serving = showOpenStatus ? servingLabel(item) : null;
+  const servingStatus = showOpenStatus
+    ? servingStatusText(item.serving_windows, listed.availability ?? undefined)
+    : null;
 
   return (
     <article className="meal-card">
       <button type="button" className="meal-card-main" onClick={onSelect}>
         <span className="meal-card-heading">
           <span className="meal-label">
-            {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+            {listed.label}
           </span>
-          {showOpenStatus && offering && <OpenBadge status={offering.open_status} />}
+          {showOpenStatus && listed.open_status && <OpenBadge status={listed.open_status} />}
+          {serving && (
+            <span className="meal-label">
+              {serving}
+              {servingStatus && ` · ${servingStatus}`}
+            </span>
+          )}
+          {macroScore !== undefined && (
+            <span className="meal-label">{macroScoreText(macroScore)}</span>
+          )}
           <strong>{item.name}</strong>
         </span>
         <span className="meal-card-price">
@@ -61,6 +84,7 @@ export function MealCard({
           </span>
         </span>
       </button>
+      {!hideBookmark && (
       <button
         type="button"
         className={`bookmark-button${saved ? " bookmark-button--saved" : ""}`}
@@ -81,6 +105,7 @@ export function MealCard({
           aria-hidden="true"
         />
       </button>
+      )}
     </article>
   );
 }

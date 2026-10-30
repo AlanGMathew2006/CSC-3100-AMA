@@ -1,5 +1,9 @@
-import type { MenuItem } from "@csc-3100-ama/shared";
+import { macroMatch, type MenuItem } from "@csc-3100-ama/shared";
+import { MacroMatchSummary } from "../../components/MacroMatch";
+import { useMealTargets } from "../../hooks/useRecommendations";
 import { allergenLabel } from "../../lib/allergens";
+import { listedLocation } from "../../lib/locations";
+import { servingLabel, servingStatusText } from "../../lib/serving";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
@@ -21,9 +25,12 @@ export function MealDetailPage({
 }) {
   const { menu, error: menuError } = useMenu();
   const savedMeals = useSavedMeals();
+  const mealTargets = useMealTargets();
   const saved = savedMeals.isSaved(item.id);
   const price = mealPrice(item);
   const offering = cheapestOffering(item);
+  // For unpriced items this is the restaurant's location (e.g. 1901 Marketplace), not "Chick-fil-A".
+  const listed = listedLocation(item);
   const picture = item.name.toLowerCase().includes("chicken rice bowl")
     ? "/assets/figma/chicken-rice-bowl.jpg"
     : null;
@@ -67,7 +74,7 @@ export function MealDetailPage({
               </div>
             )}
             <span className="detail-venue-chip">
-              {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+              {listed.label}
             </span>
             <button
               type="button"
@@ -95,8 +102,15 @@ export function MealDetailPage({
             <div>
               <h1>{item.name}</h1>
               <p className="detail-location">
-                <span /> {offering?.campus_area ?? offering?.location_name ?? item.restaurant}
+                <span /> {listed.label}
               </p>
+              {servingLabel(item) && (
+                <p className="field-helper">
+                  {servingLabel(item)}
+                  {servingStatusText(item.serving_windows, listed.availability ?? undefined) &&
+                    ` · ${servingStatusText(item.serving_windows, listed.availability ?? undefined)}`}
+                </p>
+              )}
             </div>
             <strong>{price == null ? "—" : `$${price.toFixed(2)}`}</strong>
           </div>
@@ -120,6 +134,15 @@ export function MealDetailPage({
             <p><span aria-hidden="true">✓</span> Nutrition information is shown so you can compare this meal with your daily goals.</p>
             <p><span aria-hidden="true">✓</span> {price == null ? "Price is not currently available." : `Priced at $${price.toFixed(2)} at ${offering?.location_name ?? item.restaurant}.`}</p>
             {item.serving && <p><span aria-hidden="true">✓</span> Serving: {item.serving}</p>}
+          </section>
+
+          <section className="goal-fit-card" aria-labelledby="macro-match-heading">
+            <h2 id="macro-match-heading">Fit for your next meal</h2>
+            {mealTargets.data ? (
+              <MacroMatchSummary match={macroMatch(item, mealTargets.data.targets)} />
+            ) : (
+              <p>{mealTargets.loading ? "Checking your targets…" : "Macro Match unavailable"}</p>
+            )}
           </section>
 
           <section className="goal-fit-card" aria-labelledby="allergen-heading">

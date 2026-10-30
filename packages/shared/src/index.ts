@@ -1,8 +1,14 @@
 // Shared utilities and types used across apps/packages.
-import type { OpenStatus } from "./hours.js";
+import type { ItemAvailability, OpenStatus, ServingWindows } from "./hours.js";
 
 export * from "./dietary.js";
 export * from "./hours.js";
+export * from "./macro-match.js";
+export * from "./recommendations.js";
+
+// What part of a meal an item is (meals.meal_role, from data/meal_roles.json).
+export const MEAL_ROLES = ["main", "side", "drink", "dessert", "sauce"] as const;
+export type MealRole = (typeof MEAL_ROLES)[number];
 
 export interface OnboardingInput {
   dining_dollars_balance: number;
@@ -25,6 +31,17 @@ export interface MenuOffering {
   service_date: string;
   // From the location's hours at request time; "unknown" when hours have not been collected.
   open_status: OpenStatus;
+  // Location hours AND the item's serving window (e.g. breakfast) at request time.
+  availability: ItemAvailability;
+}
+
+// A dining location an item without its own offering is sold at (same restaurant), with its status.
+export interface MenuLocationStatus {
+  location_id: string;
+  location_name: string;
+  campus_area: string | null;
+  open_status: OpenStatus;
+  availability: ItemAvailability;
 }
 
 export interface MenuItem {
@@ -42,8 +59,14 @@ export interface MenuItem {
   // Only meaningful when allergens_verified is true; otherwise show "Allergen info unavailable".
   allergens?: string[];
   allergens_verified?: boolean;
+  serving_windows?: ServingWindows;
+  meal_role?: MealRole | null;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
+  // Only for items with no offerings: the restaurant's locations, best availability first,
+  // and the item's availability across them (location hours + serving window).
+  restaurant_locations?: MenuLocationStatus[];
+  availability?: ItemAvailability;
 }
 
 export interface MenuCombo {
@@ -54,6 +77,10 @@ export interface MenuCombo {
   base_count: number | null;
   entree_count: number | null;
   price: number;
+  serving_windows?: ServingWindows;
+  // Across the restaurant's locations: available if any is serving it now.
+  availability?: ItemAvailability;
+  locations?: MenuLocationStatus[];
 }
 
 export interface MenuResponse {

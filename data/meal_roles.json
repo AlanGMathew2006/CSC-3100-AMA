@@ -1,0 +1,162 @@
+{
+  "_comment": "Meal role for every row in menu_items.csv, loaded by npm run import:menu into meals.meal_role. Roles: main | side | drink | dessert | sauce. Rules match restaurant + category; overrides by source_id win. The import fails if any meal ends up without a role. Panda Bases/Entrees are 'main' because they are only used inside a Bowl/Plate, which counts as the main. The recommender never uses dessert or sauce items.",
+  "rules": [
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Entrees",
+      "role": "main"
+    },
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Breakfast",
+      "role": "main"
+    },
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Sides",
+      "role": "side"
+    },
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Drinks",
+      "role": "drink"
+    },
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Desserts",
+      "role": "dessert"
+    },
+    {
+      "restaurant": "Chick-fil-A",
+      "category": "Dipping Sauces",
+      "role": "sauce"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "6-inch Subs",
+      "role": "main"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Footlong Subs",
+      "role": "main"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Fresh Fit",
+      "role": "main"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Breakfast",
+      "role": "main"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Soups",
+      "role": "side"
+    },
+    {
+      "restaurant": "Subway",
+      "category": "Cookies",
+      "role": "dessert"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Tacos",
+      "role": "main"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Burritos",
+      "role": "main"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Chalupas",
+      "role": "main"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Specialties",
+      "role": "main"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Nachos & Sides",
+      "role": "side"
+    },
+    {
+      "restaurant": "Taco Bell",
+      "category": "Sauces",
+      "role": "sauce"
+    },
+    {
+      "restaurant": "Panda Express",
+      "category": "Bases",
+      "role": "main"
+    },
+    {
+      "restaurant": "Panda Express",
+      "category": "Entrees",
+      "role": "main"
+    },
+    {
+      "restaurant": "Panda Express",
+      "category": "Appetizers",
+      "role": "side"
+    },
+    {
+      "restaurant": "Panda Express",
+      "category": "More",
+      "role": "sauce"
+    }
+  ],
+  "overrides": [
+    {
+      "source_id": "chick-fil-a--hash-brown",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "chick-fil-a--greek-yogurt-parfait",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "chick-fil-a--berry-parfait-with-cookie-crumbs",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "chick-fil-a--buttered-biscuit",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "chick-fil-a--english-muffin",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "chick-fil-a--mini-yeast-rolls-4-ct",
+      "role": "side",
+      "note": "breakfast side"
+    },
+    {
+      "source_id": "panda-express--apple-pie-roll",
+      "role": "dessert",
+      "note": "dessert in 'More'"
+    },
+    {
+      "source_id": "panda-express--fortune-cookie",
+      "role": "dessert",
+      "note": "dessert in 'More'"
+    },
+    {
+      "source_id": "taco-bell--cinnamon-twists",
+      "role": "dessert",
+      "note": "sweet snack listed under Nachos & Sides"
+    }
+  ]
+}

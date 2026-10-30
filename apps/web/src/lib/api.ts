@@ -1,5 +1,10 @@
 import { requireSupabase } from "./supabase";
-import type { MenuResponse, OnboardingInput } from "@csc-3100-ama/shared";
+import type {
+  MealTargetsResponse,
+  MenuResponse,
+  OnboardingInput,
+  RecommendationsResponse,
+} from "@csc-3100-ama/shared";
 import type {
   DashboardData,
   DiningLocation,
@@ -123,6 +128,33 @@ export function completeOnboarding(input: OnboardingInput): Promise<void> {
 
 export function fetchMenu(): Promise<MenuResponse> {
   return request<MenuResponse>("/api/menu");
+}
+
+export interface RecommendationParams {
+  limit?: number;
+  locationId?: string;
+  mealsRemaining?: number;
+}
+
+function recommendationQuery({ limit, locationId, mealsRemaining }: RecommendationParams): string {
+  const params = new URLSearchParams();
+  if (limit != null) params.set("limit", String(limit));
+  if (locationId) params.set("location_id", locationId);
+  if (mealsRemaining != null) params.set("meals_remaining", String(mealsRemaining));
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export function fetchRecommendations(
+  params: RecommendationParams = {},
+): Promise<RecommendationsResponse> {
+  return request<RecommendationsResponse>(`/api/recommendations${recommendationQuery(params)}`);
+}
+
+export function fetchMealTargets(
+  params: Pick<RecommendationParams, "mealsRemaining"> = {},
+): Promise<MealTargetsResponse> {
+  return request<MealTargetsResponse>(`/api/meal-targets${recommendationQuery(params)}`);
 }
 
 export function fetchPreferences(): Promise<UserPreferences | null> {

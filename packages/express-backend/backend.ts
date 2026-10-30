@@ -8,6 +8,7 @@ import express, {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createUserClient } from "./services/supabase.js";
 import * as menu from "./services/menu-service.js";
+import * as recommendations from "./services/recommendation-service.js";
 import * as svc from "./services/user-service.js";
 
 interface AuthedRequest extends Request {
@@ -58,6 +59,19 @@ const queryString = (value: unknown): string | undefined =>
 const isoDate = (value: unknown): string | undefined => {
   const text = queryString(value);
   return text && !Number.isNaN(Date.parse(text)) ? text : undefined;
+};
+
+// Optional whole-number query param within [min, max]; null means present but invalid.
+const queryInt = (
+  value: unknown,
+  min: number,
+  max: number,
+): number | undefined | null => {
+  if (value === undefined) return undefined;
+  const text = queryString(value);
+  if (!text || !/^\d+$/.test(text)) return null;
+  const parsed = Number(text);
+  return parsed >= min && parsed <= max ? parsed : null;
 };
 
 // Returns an error message when any listed field is present but not a non-negative number.
@@ -219,6 +233,38 @@ app.get(
     menu.getMenu(req.db, { openNow: queryString(req.query.open_now) === "true" }),
   ),
 );
+// Per-meal targets and budget, and the optimizer's top locations (see recommendation-service.ts).
+const recommendationOptions = (req: AuthedRequest, res: Response) => {
+  const limit = queryInt(req.query.limit, 1, 10);
+  const mealsRemaining = queryInt(req.query.meals_remaining, 1, 6);
+  if (limit === null || mealsRemaining === null) {
+    res.status(400).json({
+      error: "limit must be 1-10 and meals_remaining must be 1-6",
+    });
+    return null;
+  }
+  return {
+    at: new Date(),
+    limit: limit ?? 3,
+    mealsRemaining,
+    locationId: queryString(req.query.location_id) || undefined,
+  };
+};
+app.get(
+  "/api/meal-targets",
+  handle((req, res) => {
+    const options = recommendationOptions(req, res);
+    return options ? recommendations.getMealTargets(req.db, req.userId, options) : undefined;
+  }),
+);
+app.get(
+  "/api/recommendations",
+  handle((req, res) => {
+    const options = recommendationOptions(req, res);
+    return options ? recommendations.getRecommendations(req.db, req.userId, options) : undefined;
+  }),
+);
+
 app.get(
   "/api/menu-offerings",
   handle((req) =>

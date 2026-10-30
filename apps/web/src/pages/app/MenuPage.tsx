@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { keepOpenOfferings, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
+import { keepOpenOfferings, macroMatch, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
+import { useMealTargets } from "../../hooks/useRecommendations";
+import { servingLabel, servingStatusText } from "../../lib/serving";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 const FILTERS = ["Location", "Price", "Protein", "Calories", "Dietary"] as const;
@@ -20,6 +22,7 @@ export function MenuPage({
 }) {
   const { menu, loading, error, reload } = useMenu();
   const saved = useSavedMeals();
+  const mealTargets = useMealTargets();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Location");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -30,7 +33,7 @@ export function MenuPage({
   const locations = useMemo(() => {
     const byId = new Map<string, string>();
     for (const item of menu?.items ?? []) {
-      for (const offering of item.offerings) {
+      for (const offering of [...item.offerings, ...(item.restaurant_locations ?? [])]) {
         byId.set(offering.location_id, offering.campus_area ?? offering.location_name);
       }
     }
@@ -40,7 +43,7 @@ export function MenuPage({
   const locationStatuses = useMemo(() => {
     const byId = new Map<string, { name: string; status: OpenStatus }>();
     for (const item of menu?.items ?? []) {
-      for (const offering of item.offerings) {
+      for (const offering of [...item.offerings, ...(item.restaurant_locations ?? [])]) {
         byId.set(offering.location_id, {
           name: offering.location_name,
           status: offering.open_status,
@@ -50,6 +53,10 @@ export function MenuPage({
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }, [menu]);
   const unknownHoursCount = locationStatuses.filter((l) => l.status === "unknown").length;
+  // "Open now" also hides combos that aren't served now (e.g. breakfast meals after 10:30).
+  const combos = (menu?.combos ?? []).filter(
+    (combo) => !openNow || combo.availability !== "not_now",
+  );
   const items = useMemo(() => {
     const available = openNow ? keepOpenOfferings(menu?.items ?? []) : (menu?.items ?? []);
     const filtered = available.filter((item) => {
@@ -59,7 +66,7 @@ export function MenuPage({
       if (!matchesSearch) return false;
       if (!filterSelection) return true;
       if (filterSelection.startsWith("location:")) {
-        return item.offerings.some(
+        return [...item.offerings, ...(item.restaurant_locations ?? [])].some(
           (offering) => offering.location_id === filterSelection.slice("location:".length),
         );
       }
@@ -195,6 +202,9 @@ export function MenuPage({
                 <MealCard
                   item={item}
                   showOpenStatus
+                  macroScore={
+                    mealTargets.data ? macroMatch(item, mealTargets.data.targets).score : undefined
+                  }
                   saved={saved.isSaved(item.id)}
                   onSelect={() => onSelectMeal(item)}
                   onToggleSaved={() => void handleToggle(item)}
@@ -220,14 +230,25 @@ export function MenuPage({
           </section>
         )}
 
-        {menu && menu.combos.length > 0 && (
+        {combos.length > 0 && (
           <section className="combo-section">
             <h2>Combos &amp; Meals</h2>
-            {menu.combos.map((combo) => (
+            {combos.map((combo) => (
               <article className="combo-card" key={combo.id}>
                 <div>
-                  <span className="meal-label">{combo.restaurant}</span>
+                  <span className="meal-label">
+                    {combo.locations?.[0]
+                      ? `${combo.restaurant} · ${combo.locations[0].campus_area ?? combo.locations[0].location_name}`
+                      : combo.restaurant}
+                  </span>
                   <strong>{combo.name}</strong>
+                  {servingLabel(combo) && (
+                    <span className="meal-label">
+                      {servingLabel(combo)}
+                      {servingStatusText(combo.serving_windows, combo.availability) &&
+                        ` · ${servingStatusText(combo.serving_windows, combo.availability)}`}
+                    </span>
+                  )}
                   {combo.description && <span>{combo.description}</span>}
                 </div>
                 <b>${combo.price.toFixed(2)}</b>

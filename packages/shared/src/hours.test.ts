@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  combineAvailability,
   diningClock,
+  getItemAvailability,
+  startOfDiningDay,
   getOpenStatus,
   keepOpenOfferings,
   parseClockTime,
@@ -118,15 +121,100 @@ test("parseClockTime accepts HH:MM up to 24:00 only", () => {
   assert.equal(parseClockTime(null), null);
 });
 
-test("keepOpenOfferings drops closed locations but keeps unknown and combo-only items", () => {
+test("keepOpenOfferings drops offerings not served now but keeps unknown and combo-only items", () => {
   const items = [
-    { id: "a", offerings: [{ open_status: "open" as const }, { open_status: "closed" as const }] },
-    { id: "b", offerings: [{ open_status: "closed" as const }] },
-    { id: "c", offerings: [{ open_status: "unknown" as const }] },
+    { id: "a", offerings: [{ availability: "available" as const }, { availability: "not_now" as const }] },
+    { id: "b", offerings: [{ availability: "not_now" as const }] },
+    { id: "c", offerings: [{ availability: "unknown" as const }] },
     { id: "d", offerings: [] },
+    { id: "e", offerings: [], availability: "not_now" as const },
+    { id: "f", offerings: [], availability: "available" as const },
   ];
   assert.deepEqual(
     keepOpenOfferings(items).map((item) => [item.id, item.offerings.length]),
-    [["a", 1], ["c", 1], ["d", 0]],
+    [["a", 1], ["c", 1], ["d", 0], ["f", 0]],
   );
+});
+
+test("startOfDiningDay is midnight in Los Angeles, across PDT and PST", () => {
+  // 02:30 UTC Oct 29 is 19:30 Oct 28 PDT -> midnight Oct 28 PDT = 07:00 UTC.
+  assert.equal(
+    startOfDiningDay(new Date("2026-10-29T02:30:00Z")).toISOString(),
+    "2026-10-28T07:00:00.000Z",
+  );
+  // After the Nov 1 switch to PST (UTC-8), midnight is 08:00 UTC.
+  assert.equal(
+    startOfDiningDay(new Date("2026-11-05T20:00:00Z")).toISOString(),
+    "2026-11-05T08:00:00.000Z",
+  );
+  assert.equal(
+    startOfDiningDay(la("2026-10-28T00:00")).toISOString(),
+    "2026-10-28T07:00:00.000Z",
+  );
+});
+
+// Real campus hours from data/dining_hours.json and the Chick-fil-A breakfast window.
+const cfaHours: WeeklyHours = {
+  sun: [],
+  mon: [{ open: "07:00", close: "21:00" }],
+  tue: [{ open: "07:00", close: "21:00" }],
+  wed: [{ open: "07:00", close: "21:00" }],
+  thu: [{ open: "07:00", close: "21:00" }],
+  fri: [{ open: "07:00", close: "21:00" }],
+  sat: [{ open: "11:00", close: "21:00" }],
+};
+const breakfast: WeeklyHours = Object.fromEntries(
+  ["sun", "mon", "tue", "wed", "thu", "fri", "sat"].map((d) => [d, [{ open: "00:00", close: "10:30" }]]),
+);
+const subwayDaily = [{ open: "07:00", close: "02:00" }];
+const subwayHours: WeeklyHours = {
+  sun: subwayDaily, mon: subwayDaily, tue: subwayDaily, wed: subwayDaily,
+  thu: subwayDaily, fri: subwayDaily, sat: subwayDaily,
+};
+
+// 2026-10-26 is a Monday, 2026-10-31 a Saturday.
+test("Chick-fil-A breakfast is available at 09:00 Monday", () => {
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-26T09:00")), "available");
+});
+
+test("Chick-fil-A breakfast is not served at 10:30 exactly or at 13:00 Monday", () => {
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-26T10:29")), "available");
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-26T10:30")), "not_now");
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-26T13:00")), "not_now");
+});
+
+test("no Chick-fil-A breakfast on Saturday: the location opens at 11:00, after the window", () => {
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-31T11:30")), "not_now");
+  assert.equal(getItemAvailability(breakfast, cfaHours, la("2026-10-31T09:00")), "not_now");
+});
+
+test("an all-day item (Fruit Cup) is available whenever the location is open", () => {
+  assert.equal(getItemAvailability(null, cfaHours, la("2026-10-26T13:00")), "available");
+  assert.equal(getItemAvailability(null, cfaHours, la("2026-10-25T13:00")), "not_now"); // Sunday, closed
+});
+
+test("a Subway breakfast item with an unknown window is unknown while the store is open", () => {
+  assert.equal(getItemAvailability("unknown", subwayHours, la("2026-10-26T08:00")), "unknown");
+  assert.equal(getItemAvailability("unknown", subwayHours, la("2026-10-26T13:00")), "unknown");
+  // Closed store is a definite no.
+  assert.equal(getItemAvailability("unknown", subwayHours, la("2026-10-26T03:00")), "not_now");
+});
+
+test("unknown location hours give unknown unless the item window is definitely closed", () => {
+  assert.equal(getItemAvailability(null, {}, la("2026-10-26T13:00")), "unknown");
+  assert.equal(getItemAvailability(breakfast, null, la("2026-10-26T09:00")), "unknown");
+  assert.equal(getItemAvailability(breakfast, null, la("2026-10-26T13:00")), "not_now");
+});
+
+test("a closed item window is not_now even when no location is known at all", () => {
+  assert.equal(getItemAvailability(breakfast, undefined, la("2026-10-26T13:00")), "not_now");
+  assert.equal(getItemAvailability(breakfast, undefined, la("2026-10-26T09:00")), "unknown");
+  assert.equal(getItemAvailability(null, undefined, la("2026-10-26T13:00")), "unknown");
+});
+
+test("combineAvailability picks the best location", () => {
+  assert.equal(combineAvailability(["not_now", "unknown"]), "unknown");
+  assert.equal(combineAvailability(["not_now", "available"]), "available");
+  assert.equal(combineAvailability(["not_now"]), "not_now");
+  assert.equal(combineAvailability([]), null);
 });
