@@ -73,6 +73,59 @@ test("buildImportPlan makes one location per restaurant per area and skips unpri
   assert.equal(plan.unpricedMeals, 1);
 });
 
+const ALLERGEN_HEADER = `${HEADER},allergens,tags,allergens_verified,allergen_source`;
+const allergenRow = (id: string, tail: string) =>
+  `${id},Chick-fil-A,1901 Marketplace,Breakfast,${id},1,5.29,1,,1,1,1,,yes,,,2026-10-05,,${tail}`;
+
+test("toItemRecords reads allergens, tags and allergens_verified", () => {
+  const csv = [
+    ALLERGEN_HEADER,
+    allergenRow("cfa--bacon", "milk|Egg|wheat|egg,contains_pork,yes,chick-fil-a.com"),
+    allergenRow("cfa--unknown", ",,no,"),
+    allergenRow("cfa--blank", ",,,"),
+    allergenRow("bad--allergen", "milk|mustard,,yes,src"),
+    allergenRow("bad--tag", ",keto,yes,src"),
+    allergenRow("bad--flag", ",,maybe,"),
+    allergenRow("bad--source", "milk,,yes,"),
+    allergenRow("bad--unverified", "milk,,no,")
+  ].join("\n");
+  const { items, problems } = toItemRecords(parseCsv(csv));
+
+  assert.deepEqual(
+    items.map((i) => [
+      i.sourceId,
+      i.allergens,
+      i.tags,
+      i.allergensVerified
+    ]),
+    [
+      ["cfa--bacon", ["milk", "egg", "wheat"], ["contains_pork"], true],
+      ["cfa--unknown", [], [], false],
+      ["cfa--blank", [], [], false]
+    ]
+  );
+  assert.deepEqual(
+    problems.map((p) => p.message),
+    [
+      'unknown allergen "mustard"',
+      'unknown tag "keto"',
+      "allergens_verified must be yes or no",
+      "allergen_source is required when allergens_verified is yes",
+      "allergens/tags are set but allergens_verified is not yes"
+    ]
+  );
+
+  const plan = buildImportPlan(items, []);
+  assert.deepEqual(plan.meals[0], {
+    ...plan.meals[0],
+    allergens: ["milk", "egg", "wheat"],
+    tags: ["contains_pork"],
+    allergens_verified: true,
+    allergen_source: "chick-fil-a.com"
+  });
+  assert.equal(plan.meals[1]?.allergens_verified, false);
+});
+
 const WEEK = {
   mon: [{ open: "07:00", close: "20:00" }],
   tue: [{ open: "07:00", close: "20:00" }],
@@ -295,5 +348,9 @@ test("the real data files import without problems", () => {
     plan.locations.map((l) => l.name).sort()
   );
   assert.equal(plan.meals.length, 192);
+  assert.equal(
+    plan.meals.filter((meal) => meal.allergens_verified).length,
+    33
+  );
   assert.equal(plan.combos.length, 41);
 });

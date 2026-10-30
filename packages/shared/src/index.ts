@@ -1,6 +1,7 @@
 // Shared utilities and types used across apps/packages.
 import type { OpenStatus } from "./hours.js";
 
+export * from "./dietary.js";
 export * from "./hours.js";
 
 export interface OnboardingInput {
@@ -38,6 +39,9 @@ export interface MenuItem {
   fat_g: number | null;
   meal_component: "base" | "entree" | null;
   tags?: string[];
+  // Only meaningful when allergens_verified is true; otherwise show "Allergen info unavailable".
+  allergens?: string[];
+  allergens_verified?: boolean;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
 }

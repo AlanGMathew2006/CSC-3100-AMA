@@ -51,6 +51,9 @@ function summarize(plan: ImportPlan) {
   console.log(
     `  meals:            ${plan.meals.length} (${plan.unpricedMeals} without a standalone price)`
   );
+  console.log(
+    `                    ${plan.meals.filter((meal) => meal.allergens_verified).length} with verified allergens`
+  );
   console.log(`  menu_offerings:   ${plan.offerings.length}`);
   console.log(`  menu_combos:      ${plan.combos.length}`);
 }

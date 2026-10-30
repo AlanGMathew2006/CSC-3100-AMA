@@ -5,7 +5,9 @@
 // The load stage (writing to Supabase) lives in ../import-menu.ts.
 
 import {
+  ALLERGENS,
   DAY_KEYS,
+  DIETARY_TAGS,
   parseClockTime,
   type WeeklyHours
 } from "@csc-3100-ama/shared";
@@ -88,6 +90,10 @@ export interface ItemRecord {
   nutritionSource: string | null;
   collectedOn: string;
   notes: string | null;
+  allergens: string[];
+  tags: string[];
+  allergensVerified: boolean;
+  allergenSource: string | null;
 }
 
 export interface ComboRecord {
@@ -141,6 +147,19 @@ export function splitCampusAreas(value: string): string[] {
         .trim()
     )
     .filter(Boolean);
+}
+
+// "milk|egg" -> ["milk", "egg"]; returns the first value not in `allowed` as `bad`.
+function pipeList(
+  value: string | undefined,
+  allowed: readonly string[]
+): { values: string[]; bad: string | null } {
+  const values = (text(value) ?? "")
+    .split("|")
+    .map((part) => part.trim().toLowerCase())
+    .filter(Boolean);
+  const bad = values.find((part) => !allowed.includes(part)) ?? null;
+  return { values: [...new Set(values)], bad };
 }
 
 export function toItemRecords(rows: CsvRow[]): {
@@ -199,6 +218,21 @@ export function toItemRecords(rows: CsvRow[]): {
       return fail("collected_on is missing or not a date");
     }
 
+    const allergens = pipeList(row.allergens, ALLERGENS);
+    if (allergens.bad) return fail(`unknown allergen "${allergens.bad}"`);
+    const tags = pipeList(row.tags, DIETARY_TAGS);
+    if (tags.bad) return fail(`unknown tag "${tags.bad}"`);
+    // Blank (older CSVs without the column) means not verified.
+    const verifiedFlag = text(row.allergens_verified)?.toLowerCase() ?? "no";
+    if (verifiedFlag !== "yes" && verifiedFlag !== "no")
+      return fail("allergens_verified must be yes or no");
+    const allergensVerified = verifiedFlag === "yes";
+    const allergenSource = text(row.allergen_source);
+    if (allergensVerified && !allergenSource)
+      return fail("allergen_source is required when allergens_verified is yes");
+    if (!allergensVerified && (allergens.values.length || tags.values.length))
+      return fail("allergens/tags are set but allergens_verified is not yes");
+
     seen.add(id);
     items.push({
       sourceId: id,
@@ -220,7 +254,11 @@ export function toItemRecords(rows: CsvRow[]): {
       mealComponent: component,
       nutritionSource: text(row.nutrition_source),
       collectedOn: collectedOn.slice(0, 10),
-      notes: text(row.notes)
+      notes: text(row.notes),
+      allergens: allergens.values,
+      tags: tags.values,
+      allergensVerified,
+      allergenSource: allergensVerified ? allergenSource : null
     });
   });
 
@@ -382,6 +420,10 @@ export interface MealRow {
   meal_component: string | null;
   nutrition_source: string | null;
   notes: string | null;
+  allergens: string[]; // [] with allergens_verified = false means unknown
+  tags: string[];
+  allergens_verified: boolean;
+  allergen_source: string | null;
 }
 
 // Offerings reference meals and locations by natural key; the load stage swaps in the uuids.
@@ -461,7 +503,11 @@ export function buildImportPlan(
       fat_g: item.fatG,
       meal_component: item.mealComponent,
       nutrition_source: item.nutritionSource,
-      notes: item.notes
+      notes: item.notes,
+      allergens: item.allergens,
+      tags: item.tags,
+      allergens_verified: item.allergensVerified,
+      allergen_source: item.allergenSource
     });
 
     // Items without a standalone price (e.g. Panda entrees, sold only in combos) get no offering.
