@@ -5,6 +5,7 @@
   "type": "module",
   "main": "dist/backend.js",
   "scripts": {
+    "predev": "npm run build --prefix ../shared",
     "dev": "tsx watch --env-file=.env backend.ts",
     "build": "tsc",
     "start": "node --env-file=.env dist/backend.js",
@@ -19,7 +20,7 @@
     "@supabase/supabase-js": "^2.117.3",
     "cors": "^2.8.5",
     "express": "^5.1.0",
-    "highs": "^1.15.3"
+    "highs": "^1.15.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
