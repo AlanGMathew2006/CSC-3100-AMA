@@ -1,0 +1,40 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      NODE_ENV: production
+      SUPABASE_URL: ${SUPABASE_URL:?Set SUPABASE_URL in .env}
+      SUPABASE_PUBLISHABLE_KEY:
+        ${SUPABASE_PUBLISHABLE_KEY:?Set SUPABASE_PUBLISHABLE_KEY
+        in .env}
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:8000/health').then(r =>
+          process.exit(r.ok ? 0 : 1)).catch(() =>
+          process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL:
+          ${SUPABASE_URL:?Set SUPABASE_URL in .env}
+        VITE_SUPABASE_PUBLISHABLE_KEY:
+          ${SUPABASE_PUBLISHABLE_KEY:?Set
+          SUPABASE_PUBLISHABLE_KEY in .env}
+        VITE_API_URL: ""
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${WEB_PORT:-8080}:80"

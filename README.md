@@ -58,40 +58,37 @@ Other scripts: `npm run build`, `npm run lint`, `npm run test`.
 
 Never commit `.env` files or the Supabase service-role key.
 
-## Run PolyProvision with Docker
+## Run the full app with Docker
 
-This project’s React/Vite web app can run in a Docker container
-using Nginx.
+Docker Compose starts the web app and API together. Supabase
+remains an external service, so each teammate needs access to a
+configured Supabase project and its database schema.
 
-### Prerequisites
+1. Install and start Docker Desktop.
+2. Copy `.env.example` to `.env` and set `SUPABASE_URL` and
+   `SUPABASE_PUBLISHABLE_KEY` to the values for your Supabase
+   project.
+3. Apply the database schema or migrations described above.
+4. In Supabase **Authentication → URL Configuration**, add
+   `http://localhost:8080/reset-password` to **Redirect URLs**.
+   To let peers open the app from another machine, also allow
+   the host machine's app URL, such as
+   `http://192.168.1.20:8080/reset-password`.
+5. From the repository root, run:
 
-- Docker Desktop installed and running
-- The PolyProvision backend/API running locally on port `8000`
-- A Supabase project with a publishable key
+   ```powershell
+   docker compose up --build
+   ```
 
-### Build the image
+Open `http://localhost:8080` (or the port set by `WEB_PORT`).
+Peers on the same network can use
+`http://<host-machine-ip>:<port>` if the host firewall allows
+inbound connections on that port. Stop the app with `Ctrl+C`;
+run `docker compose down` to stop and remove its containers.
 
-From the repository root, build the frontend image:
-
-```powershell
-docker build `
-  --build-arg VITE_SUPABASE_URL="your-supabase-project-url" `
-  --build-arg VITE_SUPABASE_PUBLISHABLE_KEY="your-supabase-publishable-key" `
-  -t polyprovision-web .
-```
-
-### Verify the image was created
-
-```powershell
-docker images polyprovision-web
-```
-
-### Run the Container
-
-```powershell
-docker run --rm -p 8080:80 --name polyprovision-web polyprovision-web
-```
-
-Open the app at:
-
-http://localhost:8080
+The web container serves the frontend and proxies API requests
+to the API container, so the browser uses the same address for
+both. This makes the app available on the local network; sharing
+it over the public internet requires deploying it or using a
+secure tunnel. Never commit `.env` files or a Supabase
+service-role key.
