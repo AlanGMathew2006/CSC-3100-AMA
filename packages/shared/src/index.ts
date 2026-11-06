@@ -1,6 +1,7 @@
 // Shared utilities and types used across apps/packages.
 import type { ItemAvailability, OpenStatus, ServingWindows } from "./hours.js";
 
+export * from "./combos.js";
 export * from "./dietary.js";
 export * from "./hours.js";
 export * from "./macro-match.js";

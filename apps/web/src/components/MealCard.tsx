@@ -29,6 +29,8 @@ export function MealCard({
   showOpenStatus = false,
   macroScore,
   hideBookmark = false,
+  onAdd,
+  adding = false,
   onSelect,
   onToggleSaved,
 }: {
@@ -41,6 +43,9 @@ export function MealCard({
   macroScore?: number | null;
   // For multi-item recommendations, where saving one item would be misleading.
   hideBookmark?: boolean;
+  // Shows a small "+" button that adds the item to today (only where a page passes it).
+  onAdd?: () => void;
+  adding?: boolean;
   onSelect: () => void;
   onToggleSaved: () => void;
 }) {
@@ -84,6 +89,17 @@ export function MealCard({
           </span>
         </span>
       </button>
+      {onAdd && (
+        <button
+          type="button"
+          className="meal-card-add"
+          aria-label={`Add ${item.name} to today`}
+          disabled={adding}
+          onClick={onAdd}
+        >
+          <span aria-hidden="true">+</span>
+        </button>
+      )}
       {!hideBookmark && (
       <button
         type="button"

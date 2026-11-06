@@ -1517,6 +1517,28 @@ button.eye-icon {
   background: transparent;
 }
 
+.meal-card-add {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #154734;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.meal-card-add:disabled {
+  opacity: .5;
+}
+
 .bookmark-button img {
   max-width: 18px;
   max-height: 18px;
@@ -1718,6 +1740,13 @@ button.eye-icon {
   border-radius: 14px;
   background: #fff;
   color: #154734;
+}
+
+.combo-card--button {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .combo-card div {

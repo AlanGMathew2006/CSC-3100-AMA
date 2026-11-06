@@ -3,6 +3,7 @@ import highsModule from "highs";
 import {
   diningClock,
   getOpenStatus,
+  isBuildYourOwnCombo,
   isMealAllowed,
   macroMatch,
   MACROS,
@@ -386,13 +387,9 @@ const fullNutrition = (item: MenuItem): Nutrition | null =>
       ) as Nutrition)
     : null;
 
-// Bowl / Plate / Bigger Plate: a base_count + entree_count and the customer picks the contents.
+// isBuildYourOwnCombo (shared): Bowl / Plate / Bigger Plate, where the customer picks the contents.
 // TODO: fixed-content combos (Panda #1-#6 Plates, Taco Bell and Chick-fil-A meals) are skipped for
 // now because their exact contents aren't in the data.
-const isBuildYourOwnCombo = (combo: MenuCombo) =>
-  combo.base_count != null &&
-  combo.entree_count != null &&
-  !/^#\d/.test(combo.name);
 
 export function computeMealTargets(
   data: RecommendationData,

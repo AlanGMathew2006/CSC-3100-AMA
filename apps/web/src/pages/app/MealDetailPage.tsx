@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { macroMatch, type MenuItem } from "@csc-3100-ama/shared";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useMealTargets } from "../../hooks/useRecommendations";
@@ -7,7 +8,9 @@ import { servingLabel, servingStatusText } from "../../lib/serving";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
+import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
+import { defaultLogLocation, logLocations, mealLogFromItem, UNPRICED_LOG_NOTE } from "../../lib/mealLog";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 export function MealDetailPage({
@@ -26,7 +29,14 @@ export function MealDetailPage({
   const { menu, error: menuError } = useMenu();
   const savedMeals = useSavedMeals();
   const mealTargets = useMealTargets();
+  const log = useLogMeal();
   const saved = savedMeals.isSaved(item.id);
+  // Where the item is logged from; defaults to a location serving it now.
+  const locations = logLocations(item);
+  const [pickedLocationId, setPickedLocationId] = useState<string | null>(null);
+  const logLocation =
+    locations.find((location) => location.location_id === pickedLocationId) ??
+    defaultLogLocation(locations);
   const price = mealPrice(item);
   const offering = cheapestOffering(item);
   // For unpriced items this is the restaurant's location (e.g. 1901 Marketplace), not "Chick-fil-A".
@@ -51,12 +61,19 @@ export function MealDetailPage({
     else onToast(result ? "Meal saved to your plans" : "Meal removed from saved plans");
   }
 
+  async function handleAdd() {
+    if (await log.addMeal(mealLogFromItem(item, logLocation?.location_id))) {
+      onToast("Added to today");
+    }
+  }
+
   return (
     <div className="page-shell page-shell--dashboard">
       <BrandHeader />
       <main className="app-content detail-content">
         {savedMeals.error && <p className="field-helper error" role="alert">{savedMeals.error}</p>}
         {menuError && <p className="field-helper error" role="alert">{menuError}</p>}
+        {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
         <div className="detail-heading">
           <button type="button" className="back-button" onClick={onBack}>
             <img src="/assets/figma/back.svg" alt="" />
@@ -164,12 +181,37 @@ export function MealDetailPage({
             )}
           </section>
 
+          {locations.length > 1 && (
+            <label className="filter-select-wrap">
+              <span className="field-helper">Where are you eating it?</span>
+              <select
+                value={logLocation?.location_id ?? ""}
+                onChange={(event) => setPickedLocationId(event.target.value)}
+              >
+                {locations.map((location) => (
+                  <option key={location.location_id} value={location.location_id}>
+                    {location.campus_area ?? location.location_name}
+                    {location.price == null ? " · price unavailable" : ` · $${location.price.toFixed(2)}`}
+                    {location.availability === "not_now" ? " · not served now" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <div className="detail-actions">
-            <button type="button" className="secondary-button" onClick={onBack}>Not interested</button>
-            <button type="button" className="primary-button" onClick={() => void toggle(item)}>
+            <button type="button" className="secondary-button" onClick={() => void toggle(item)}>
               {saved ? "Saved" : "Save meal"}
             </button>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={log.logging}
+              onClick={() => void handleAdd()}
+            >
+              {log.logging ? "Adding…" : "Add to Today"}
+            </button>
           </div>
+          {logLocation?.price == null && <p className="field-helper">{UNPRICED_LOG_NOTE}</p>}
 
           <section className="detail-alternatives">
             <h2>Lower-cost alternative nearby</h2>

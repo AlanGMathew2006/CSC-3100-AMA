@@ -15,7 +15,8 @@ import { LoginPage } from "./pages/auth/LoginPage";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
 import { SignupPage } from "./pages/auth/SignupPage";
 import { isSupabaseConfigured } from "./lib/supabase";
-import type { Recommendation } from "@csc-3100-ama/shared";
+import type { MenuCombo, Recommendation } from "@csc-3100-ama/shared";
+import { ComboDetailPage } from "./pages/app/ComboDetailPage";
 import { DashboardPage } from "./pages/app/DashboardPage";
 import { MealDetailPage } from "./pages/app/MealDetailPage";
 import { MenuPage } from "./pages/app/MenuPage";
@@ -41,6 +42,8 @@ function SignedInApp() {
   // A whole recommended meal from the dashboard; its items open in MealDetailPage on top of it.
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null);
+  // A combo opened from Explore's "Combos & Meals".
+  const [selectedCombo, setSelectedCombo] = useState<MenuCombo | null>(null);
   const [toastMessage, setToastMessage] = useState("");
 
   useEffect(() => {
@@ -60,6 +63,7 @@ function SignedInApp() {
   function navigate(nextTab: AppTab) {
     setSelectedMeal(null);
     setSelectedRecommendation(null);
+    setSelectedCombo(null);
     setTab(nextTab);
   }
 
@@ -121,10 +125,19 @@ function SignedInApp() {
       onNavigate={navigate}
       onToast={onToast}
     />
+  ) : selectedCombo && tab === "explore" ? (
+    <ComboDetailPage
+      key={selectedCombo.id}
+      combo={selectedCombo}
+      onBack={() => setSelectedCombo(null)}
+      onNavigate={navigate}
+      onToast={onToast}
+    />
   ) : tab === "explore" ? (
     <MenuPage
       onNavigate={navigate}
       onSelectMeal={openMeal}
+      onSelectCombo={setSelectedCombo}
       onToast={onToast}
     />
   ) : tab === "saved" ? (
