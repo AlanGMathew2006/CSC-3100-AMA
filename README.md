@@ -92,3 +92,13 @@ both. This makes the app available on the local network; sharing
 it over the public internet requires deploying it or using a
 secure tunnel. Never commit `.env` files or a Supabase
 service-role key.
+
+# Authentication Sequence Diagram 
+
+1. New-Account Sequence Diagram
+<img width="1182" height="1073" alt="Poly Provision UML Diagram-New_Account_Sequence_Diagram drawio" src="https://github.com/user-attachments/assets/d6330d39-08c1-4f54-9d04-1bf470e227cd" />
+
+2. Sign-In Sequence Diagram
+<img width="1182" height="1073" alt="Poly Provision UML Diagram-Sign-In_Sequence_Diagram drawio" src="https://github.com/user-attachments/assets/0663fab6-bb7f-4ba0-9610-4a4228a479cb" />
+
+
