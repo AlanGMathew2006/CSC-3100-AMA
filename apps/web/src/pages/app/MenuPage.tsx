@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
-import { keepOpenOfferings, macroMatch, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
+import { keepOpenOfferings, macroMatch, type MenuCombo, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
+import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMealTargets } from "../../hooks/useRecommendations";
+import { logLocations, mealLogFromItem, UNPRICED_LOG_NOTE } from "../../lib/mealLog";
 import { servingLabel, servingStatusText } from "../../lib/serving";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
@@ -14,14 +16,17 @@ type Filter = (typeof FILTERS)[number];
 export function MenuPage({
   onNavigate,
   onSelectMeal,
+  onSelectCombo,
   onToast,
 }: {
   onNavigate: (tab: AppTab) => void;
   onSelectMeal: (item: MenuItem) => void;
+  onSelectCombo: (combo: MenuCombo) => void;
   onToast: (message: string) => void;
 }) {
   const { menu, loading, error, reload } = useMenu();
   const saved = useSavedMeals();
+  const log = useLogMeal();
   const mealTargets = useMealTargets();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Location");
@@ -119,6 +124,19 @@ export function MenuPage({
     }
   }
 
+  // Sold at one place: log it right away. Otherwise open the details so the user picks where.
+  async function handleAdd(item: MenuItem) {
+    const locations = logLocations(item);
+    if (locations.length !== 1) {
+      onSelectMeal(item);
+      return;
+    }
+    const location = locations[0];
+    if (await log.addMeal(mealLogFromItem(item, location?.location_id))) {
+      onToast(location?.price == null ? `Added to today. ${UNPRICED_LOG_NOTE}.` : "Added to today");
+    }
+  }
+
   return (
     <div className="page-shell page-shell--dashboard">
       <BrandHeader />
@@ -133,6 +151,7 @@ export function MenuPage({
           </p>
         )}
         {saved.error && <p className="field-helper error" role="alert">{saved.error}</p>}
+        {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
 
         <label className="explore-search">
           <img src="/assets/figma/search.svg" alt="" aria-hidden="true" />
@@ -208,6 +227,8 @@ export function MenuPage({
                   saved={saved.isSaved(item.id)}
                   onSelect={() => onSelectMeal(item)}
                   onToggleSaved={() => void handleToggle(item)}
+                  onAdd={() => void handleAdd(item)}
+                  adding={log.logging}
                 />
               </li>
             ))}
@@ -234,7 +255,12 @@ export function MenuPage({
           <section className="combo-section">
             <h2>Combos &amp; Meals</h2>
             {combos.map((combo) => (
-              <article className="combo-card" key={combo.id}>
+              <button
+                type="button"
+                className="combo-card combo-card--button"
+                key={combo.id}
+                onClick={() => onSelectCombo(combo)}
+              >
                 <div>
                   <span className="meal-label">
                     {combo.locations?.[0]
@@ -252,7 +278,7 @@ export function MenuPage({
                   {combo.description && <span>{combo.description}</span>}
                 </div>
                 <b>${combo.price.toFixed(2)}</b>
-              </article>
+              </button>
             ))}
           </section>
         )}

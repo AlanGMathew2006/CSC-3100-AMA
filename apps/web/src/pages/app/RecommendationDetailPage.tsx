@@ -2,7 +2,7 @@ import type { MenuItem, Recommendation, RecommendationItem } from "@csc-3100-ama
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MacroMatchSummary } from "../../components/MacroMatch";
-import { useDashboard } from "../../hooks/useDashboard";
+import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
 import { allergenLabel } from "../../lib/allergens";
 import { combinedAllergens, recommendationLabel, recommendationLog } from "../../lib/recommendations";
@@ -42,7 +42,7 @@ export function RecommendationDetailPage({
   onToast: (message: string) => void;
 }) {
   const { menu, error: menuError } = useMenu();
-  const { logging, error: logError, addMeal } = useDashboard();
+  const { logging, error: logError, addMeal } = useLogMeal();
   const menuItems = menu?.items ?? [];
   const allergens = combinedAllergens(rec, menuItems);
 

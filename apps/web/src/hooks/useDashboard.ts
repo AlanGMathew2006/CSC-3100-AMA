@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { fetchDashboard, logMeal } from "../lib/api";
+import { fetchDashboard } from "../lib/api";
 import { errorMessage } from "../lib/errors";
 import type { DashboardData, MealLogInput } from "../types/dashboard";
+import { useLogMeal } from "./useLogMeal";
 
 export function useDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState("");
-  const [logging, setLogging] = useState(false);
+  const log = useLogMeal();
 
   const reload = useCallback(async () => {
     try {
@@ -22,18 +23,10 @@ export function useDashboard() {
   }, [reload]);
 
   async function addMeal(meal: MealLogInput): Promise<boolean> {
-    setLogging(true);
-    try {
-      await logMeal(meal);
-      await reload();
-      return true;
-    } catch (err) {
-      setError(errorMessage(err));
-      return false;
-    } finally {
-      setLogging(false);
-    }
+    if (!(await log.addMeal(meal))) return false;
+    await reload();
+    return true;
   }
 
-  return { data, error, logging, reload, addMeal };
+  return { data, error: error || log.error, logging: log.logging, reload, addMeal };
 }
