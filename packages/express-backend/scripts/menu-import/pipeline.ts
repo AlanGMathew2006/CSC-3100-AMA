@@ -4,14 +4,20 @@
 //   dining_hours.json -> JSON.parse -> toHoursRecords (clean + validate) -> buildImportPlan
 //   serving_windows.json -> JSON.parse -> toServingWindowRules (clean + validate) -> applyServingWindows (filter)
 //   meal_roles.json -> JSON.parse -> toMealRoleRules (clean + validate) -> applyMealRoles (filter)
+//   combo_contents.json -> JSON.parse -> toComboContents (clean + validate) -> applyComboContents (filter)
 // The load stage (writing to Supabase) lives in ../import-menu.ts.
 
 import {
   ALLERGENS,
+  COMBO_SLOTS,
   DAY_KEYS,
   DIETARY_TAGS,
   MEAL_ROLES,
+  isBuildYourOwnCombo,
   parseClockTime,
+  type ComboComponent,
+  type ComboContents,
+  type ComboSlot,
   type MealRole,
   type ServingWindows,
   type WeeklyHours
@@ -543,6 +549,8 @@ export interface ComboRow {
   price: number;
   price_source: string | null;
   serving_windows: ServingWindows;
+  // Meal ids are source_ids here; the load stage swaps in meals.id. null = build-your-own.
+  contents: ComboContents | null;
 }
 
 export interface ImportPlan {
@@ -640,7 +648,8 @@ export function buildImportPlan(
       entree_count: combo.entreeCount,
       price: combo.price,
       price_source: combo.priceSource,
-      serving_windows: null
+      serving_windows: null,
+      contents: null
     })),
     unpricedMeals,
     locationsWithoutHours: [...locations.values()]
@@ -788,5 +797,123 @@ export function applyMealRoles(
     unmatched: rules.overrides
       .map((o) => o.sourceId)
       .filter((id) => !ids.has(id))
+  };
+}
+
+// ---------- Combo contents ----------
+
+// One component of data/combo_contents.json, or a problem message.
+function comboComponent(
+  value: unknown,
+  mealIds: Set<string>
+): ComboComponent | string {
+  const entry = (value ?? {}) as Record<string, unknown>;
+  const known = (id: unknown): id is string =>
+    typeof id === "string" && mealIds.has(id);
+  if ("meal" in entry) {
+    if (!known(entry.meal)) return `unknown meal "${String(entry.meal)}"`;
+    const servings = entry.servings;
+    if (typeof servings !== "number" || !Number.isFinite(servings) || servings <= 0)
+      return `servings for ${entry.meal} must be a number > 0`;
+    return { meal: entry.meal, servings };
+  }
+  if ("slot" in entry) {
+    const slot = entry.slot;
+    if (!(COMBO_SLOTS as readonly unknown[]).includes(slot))
+      return `unknown slot "${String(slot)}"`;
+    const choices = entry.choices;
+    if (!Array.isArray(choices) || choices.length === 0)
+      return `${String(slot)} slot needs at least one choice`;
+    const unknownChoice = choices.find((id) => !known(id));
+    if (unknownChoice !== undefined)
+      return `unknown meal "${String(unknownChoice)}" in ${String(slot)} choices`;
+    if (new Set(choices).size !== choices.length)
+      return `${String(slot)} choices have a duplicate`;
+    if (typeof entry.default !== "string" || !choices.includes(entry.default))
+      return `${String(slot)} default must be one of its choices`;
+    return {
+      slot: slot as ComboSlot,
+      choices: choices as string[],
+      default: entry.default
+    };
+  }
+  return 'each component needs "meal" or "slot"';
+}
+
+// Parsed data/combo_contents.json (keyed by combo source_id) -> contents per combo. Every meal id
+// must exist, servings must be > 0, slot defaults must be among the choices, and every combo row
+// must have an entry unless it is build-your-own (Bowl / Plate / Bigger Plate).
+export function toComboContents(
+  data: unknown,
+  mealIds: Iterable<string>,
+  combos: ComboRecord[]
+): { contents: Map<string, ComboContents>; problems: Problem[] } {
+  const contents = new Map<string, ComboContents>();
+  const problems: Problem[] = [];
+  const ids = new Set(mealIds);
+  if (typeof data !== "object" || data === null || Array.isArray(data)) {
+    problems.push({ row: 0, id: "", message: "expected an object keyed by combo source_id" });
+    return { contents, problems };
+  }
+  const byId = new Map(combos.map((combo) => [combo.sourceId, combo]));
+
+  Object.entries(data as Record<string, unknown>).forEach(([sourceId, value], index) => {
+    const fail = (message: string) =>
+      problems.push({ row: index + 1, id: sourceId, message });
+    const combo = byId.get(sourceId);
+    if (!combo) return fail("matches no combo in menu_combos.csv");
+    if (isBuildYourOwnCombo({ name: combo.name, base_count: combo.baseCount, entree_count: combo.entreeCount }))
+      return fail("build-your-own combos have no fixed contents");
+    const entry = (value ?? {}) as Record<string, unknown>;
+    const source = typeof entry.source === "string" ? text(entry.source) : null;
+    if (!source) return fail("source is required");
+    if (typeof entry.verified !== "boolean") return fail("verified must be true or false");
+    if (!Array.isArray(entry.components)) return fail("components must be an array");
+    if (entry.notes != null && typeof entry.notes !== "string")
+      return fail("notes must be text");
+
+    const components: ComboComponent[] = [];
+    for (const raw of entry.components) {
+      const component = comboComponent(raw, ids);
+      if (typeof component === "string") return fail(component);
+      components.push(component);
+    }
+    const slots = components.flatMap((c) => ("slot" in c ? [c.slot] : []));
+    if (new Set(slots).size !== slots.length) return fail("duplicate slot");
+    if (entry.verified && components.length === 0)
+      return fail("verified contents need at least one component");
+
+    contents.set(sourceId, {
+      source,
+      verified: entry.verified,
+      components,
+      notes: typeof entry.notes === "string" ? text(entry.notes) : null
+    });
+  });
+
+  for (const combo of combos) {
+    const buildYourOwn = isBuildYourOwnCombo({
+      name: combo.name,
+      base_count: combo.baseCount,
+      entree_count: combo.entreeCount
+    });
+    if (!buildYourOwn && !contents.has(combo.sourceId) && !problems.some((p) => p.id === combo.sourceId))
+      problems.push({ row: 0, id: combo.sourceId, message: "fixed-content combo has no entry" });
+  }
+  return { contents, problems };
+}
+
+// Sets contents on every combo; build-your-own combos get null, so a re-import always writes the
+// current file.
+export function applyComboContents(
+  plan: ImportPlan,
+  contents: Map<string, ComboContents>
+): ImportPlan {
+  return {
+    ...plan,
+    combos: plan.combos.map((combo) => ({
+      ...combo,
+      contents: contents.get(combo.source_id) ?? null
+    }))
   };
 }

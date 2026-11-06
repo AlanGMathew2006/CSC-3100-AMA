@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { MealRole, MenuCombo, MenuItem } from "@csc-3100-ama/shared";
+import type { ComboContents, MealRole, MenuCombo, MenuItem } from "@csc-3100-ama/shared";
 import {
   buildModel,
   defaultMealsRemaining,
@@ -344,7 +344,7 @@ test("closed locations and ones without Dining Dollars are skipped with a reason
   assert.ok(result.recommendations.every((r) => r.location.id !== "loc-tb" && r.location.id !== "loc-cafe"));
 });
 
-test("only build-your-own combos are used, never fixed-content ones", async () => {
+test("fixed-content combos without contents are never used; build-your-own fill their counts", async () => {
   const result = await recommend(data(), { at: NOON_WED, locationId: "loc-panda" });
   const rec = result.recommendations[0];
   assert.ok(rec);
@@ -539,4 +539,260 @@ test("the explanation leads with the macro the user's priorities care about", ()
     "Balances your macros for this meal (Macro Match 88) and stays $10.00 under today's budget."
   );
   assert.match(explain(match, 10, 20, []), /^Covers 95% of your remaining protein/);
+});
+
+// ---------- Fixed-content combos ----------
+
+// Mock Chick-fil-A: sandwich + fries + tea hit the 2-meals-left targets (750 / 40 / 95 / 25)
+// exactly. Bought separately they cost $13.73; the meal is $11.55.
+const cfa = (id: string, macros: [number, number, number, number], price: number, role: MealRole, allergens: string[] = []) =>
+  item(id, "Chick-fil-A", macros, { price, locationId: "loc-cfa", allergens, role });
+const CFA_ITEMS = [
+  cfa("cfa-sandwich", [450, 35, 30, 12], 7.39, "main", ["milk", "wheat"]),
+  cfa("cfa-nuggets", [250, 27, 11, 11], 6.59, "main", ["milk"]),
+  cfa("cfa-fries", [180, 5, 34, 13], 3.45, "side", ["soy"]),
+  cfa("cfa-fruit", [60, 1, 14, 0], 4.99, "side"),
+  cfa("cfa-tea", [120, 0, 31, 0], 2.89, "drink"),
+  cfa("cfa-lemonade", [260, 0, 66, 0], 3.39, "drink")
+];
+const fixedCombo = (id: string, restaurant: string, name: string, price: number, contents: ComboContents): MenuCombo => ({
+  ...combo(id, restaurant, name, price, null, null),
+  contents
+});
+const SANDWICH_MEAL = fixedCombo("c-cfa-meal", "Chick-fil-A", "Sandwich Meal", 11.55, {
+  source: "mock",
+  verified: true,
+  components: [
+    { meal: "cfa-sandwich", servings: 1 },
+    { slot: "side", choices: ["cfa-fruit", "cfa-fries"], default: "cfa-fries" },
+    { slot: "drink", choices: ["cfa-tea"], default: "cfa-tea" }
+  ]
+});
+const cfaData = (combos: MenuCombo[] = [SANDWICH_MEAL], overrides: Partial<RecommendationData> = {}) =>
+  data({
+    locations: [location("loc-cfa", "Chick-fil-A", allDay)],
+    menu: { items: CFA_ITEMS, combos },
+    ...overrides
+  });
+
+test("buildModel adds a fixed combo with one choice per slot and counts its slots as side/drink", () => {
+  const model = buildModel({
+    standalone: [
+      { id: "fries", name: "Fries", price: 3, nutrition: nutrition(400, 5, 45, 24), role: "side" }
+    ],
+    components: [],
+    combos: [],
+    fixedCombos: [
+      {
+        id: "meal",
+        name: "Meal",
+        price: 11,
+        parts: [{ id: "sandwich", name: "Sandwich", servings: 1, nutrition: nutrition(400, 30, 40, 15), role: "main", part: "entree" }],
+        slots: [
+          {
+            slot: "side",
+            choices: [
+              { id: "fruit", name: "Fruit", nutrition: nutrition(60, 1, 14, 0), role: "side" },
+              { id: "fries", name: "Fries", nutrition: nutrition(400, 5, 45, 24), role: "side" }
+            ]
+          },
+          { slot: "drink", choices: [{ id: "tea", name: "Tea", nutrition: nutrition(120, 0, 31, 0), role: "drink" }] }
+        ]
+      }
+    ],
+    targets: { calories: 800 },
+    budget: 20,
+    weights: objectiveWeights([])
+  });
+  assert.ok(model);
+  // Slot choices are sorted by id: fries before fruit.
+  assert.deepEqual(
+    Object.entries(model.variables).map(([name, v]) => [name, v.kind, v.option.id]),
+    [
+      ["x0", "item", "fries"],
+      ["w0", "fixed_combo", "meal"],
+      ["s0_0_0", "slot_choice", "fries"],
+      ["s0_0_1", "slot_choice", "fruit"],
+      ["s0_1_0", "slot_choice", "tea"]
+    ]
+  );
+  const lines = model.lp.split("\n");
+  assert.ok(lines.includes(" macro_calories: 400 x0 + 400 w0 + 400 s0_0_0 + 60 s0_0_1 + 120 s0_1_0 - 1 over_calories + 1 under_calories = 800"));
+  assert.ok(lines.includes(" budget: 3 x0 + 11 w0 <= 20"));
+  assert.ok(lines.includes(" one_combo: 1 w0 <= 1"));
+  assert.ok(lines.includes(" slot_w0_side: 1 s0_0_0 + 1 s0_0_1 - 1 w0 = 0"));
+  assert.ok(lines.includes(" slot_w0_drink: 1 s0_1_0 - 1 w0 = 0"));
+  assert.ok(lines.includes(" min_mains: 1 w0 >= 1"));
+  assert.ok(lines.includes(" max_sides: 1 x0 + 1 s0_0_0 + 1 s0_0_1 <= 1"));
+  assert.ok(lines.includes(" max_drinks: 1 s0_1_0 <= 1"));
+  assert.ok(lines.includes(" max_items: 1 x0 + 1 w0 <= 4"), "the combo counts as one item");
+  assert.deepEqual(lines.slice(-3), ["Binaries", " w0 s0_0_0 s0_0_1 s0_1_0", "End"]);
+});
+
+test("a Chick-fil-A meal that is the best fit is picked with its slots filled", async () => {
+  const result = await recommend(cfaData(), { at: NOON_WED, limit: 1 });
+  const rec = result.recommendations[0];
+  assert.ok(rec);
+  assert.deepEqual(rec.combo, { id: "c-cfa-meal", name: "Sandwich Meal", price: 11.55 });
+  assert.deepEqual(
+    rec.items.map((i) => [i.meal_id, i.quantity, i.unit_price, i.combo_part, i.meal_role]),
+    [
+      ["cfa-sandwich", 1, null, "entree", "main"],
+      ["cfa-fries", 1, null, "side", "side"],
+      ["cfa-tea", 1, null, "drink", "drink"]
+    ]
+  );
+  assert.equal(rec.total_price, 11.55);
+  assert.deepEqual(rec.nutrition, { calories: 750, protein_g: 40, carbs_g: 95, fat_g: 25 });
+  assert.equal(rec.macro_match.score, 100);
+});
+
+test("the optimizer uses the meal when it is cheaper than the same items bought separately", async () => {
+  const separate = (await recommend(cfaData([]), { at: NOON_WED, limit: 1 })).recommendations[0];
+  assert.ok(separate);
+  assert.equal(separate.combo, null);
+  assert.deepEqual(separate.items.map((i) => i.meal_id), ["cfa-sandwich", "cfa-fries", "cfa-tea"]);
+  assert.equal(separate.total_price, 13.73);
+
+  const withMeal = (await recommend(cfaData(), { at: NOON_WED, limit: 1 })).recommendations[0];
+  assert.equal(withMeal?.combo?.id, "c-cfa-meal");
+  assert.ok((withMeal?.total_price ?? Infinity) < separate.total_price);
+  assert.ok((withMeal?.objective ?? Infinity) < separate.objective);
+});
+
+test("a fixed combo's slots use up the side and drink, so no extra side or drink is added", async () => {
+  for (const spent of [0, 5, 10]) {
+    const result = await recommend(
+      cfaData([SANDWICH_MEAL], { todayLogs: [{ price: spent, calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }] }),
+      { at: NOON_WED, limit: 1, mealsRemaining: 1 }
+    );
+    for (const rec of result.recommendations) {
+      assert.ok(rec.total_price <= result.budget + 1e-9);
+      const sides = rec.items.filter((i) => i.meal_role === "side").length;
+      const drinks = rec.items.filter((i) => i.meal_role === "drink").length;
+      assert.ok(sides <= 1 && drinks <= 1, JSON.stringify(rec.items));
+      const mains = rec.items.filter((i) => i.meal_role === "main" && i.combo_part === null).reduce((n, i) => n + i.quantity, 0);
+      assert.ok(mains + (rec.combo ? 1 : 0) <= 2);
+    }
+  }
+});
+
+test("a combo with a disallowed allergen in a fixed part is never picked", async () => {
+  for (const allergen of ["milk", "wheat"]) {
+    const result = await recommend(cfaData([SANDWICH_MEAL], { preferences: { allergens: [allergen] } }), {
+      at: NOON_WED,
+      limit: 10
+    });
+    for (const rec of result.recommendations) {
+      assert.notEqual(rec.combo?.id, "c-cfa-meal");
+      assert.ok(rec.items.every((i) => i.meal_id !== "cfa-sandwich"));
+    }
+  }
+});
+
+test("an excluded slot choice is dropped; a slot with no choice left makes the combo ineligible", async () => {
+  // Fries contain soy: the meal comes with fruit instead. Fruit and tea are only sold in the meal
+  // here, so the meal is clearly better than the sandwich alone.
+  const mealOnly = [
+    CFA_ITEMS[0] as MenuItem,
+    CFA_ITEMS[2] as MenuItem,
+    item("cfa-fruit", "Chick-fil-A", [60, 1, 14, 0], { role: "side" }),
+    item("cfa-tea", "Chick-fil-A", [120, 0, 31, 0], { role: "drink" })
+  ];
+  const noSoy = (await recommend(
+    cfaData([SANDWICH_MEAL], { preferences: { allergens: ["soy"] }, menu: { items: mealOnly, combos: [SANDWICH_MEAL] } }),
+    { at: NOON_WED, limit: 1 }
+  )).recommendations[0];
+  assert.equal(noSoy?.combo?.id, "c-cfa-meal");
+  assert.ok(noSoy?.items.some((i) => i.meal_id === "cfa-fruit" && i.combo_part === "side"));
+  assert.ok(noSoy?.items.every((i) => i.meal_id !== "cfa-fries"));
+
+  const friesOnly = fixedCombo("c-cfa-meal", "Chick-fil-A", "Sandwich Meal", 11.55, {
+    ...(SANDWICH_MEAL.contents as ComboContents),
+    components: [
+      { meal: "cfa-sandwich", servings: 1 },
+      { slot: "side", choices: ["cfa-fries"], default: "cfa-fries" }
+    ]
+  });
+  const result = await recommend(cfaData([friesOnly], { preferences: { allergens: ["soy"] } }), { at: NOON_WED, limit: 10 });
+  assert.ok(result.recommendations.every((rec) => rec.combo === null));
+});
+
+test("unverified combos (Taco Bell, Panda #4) are never picked, even as the perfect fit", async () => {
+  const perfect = (restaurant: string, id: string, name: string, meal: string) =>
+    fixedCombo(id, restaurant, name, 1, {
+      source: "mock",
+      verified: false,
+      components: [{ meal, servings: 1 }]
+    });
+  const tbPerfect = item("tb-perfect", "Taco Bell", [750, 40, 95, 25], { role: "main" });
+  const pxPerfect = item("px-perfect", "Panda Express", [750, 40, 95, 25], { component: "entree", role: "main" });
+  const result = await recommend(
+    data({
+      locations: [location("loc-tb", "Taco Bell", allDay), location("loc-panda", "Panda Express", allDay)],
+      menu: {
+        items: [...ITEMS, tbPerfect, pxPerfect],
+        combos: [
+          ...COMBOS,
+          perfect("Taco Bell", "c-tb-combo", "3 Crunchy Taco Combo", "tb-perfect"),
+          perfect("Panda Express", "c-px-4", "#4 Plate", "px-perfect")
+        ]
+      }
+    }),
+    { at: NOON_WED, limit: 10 }
+  );
+  for (const rec of result.recommendations) {
+    assert.ok(rec.combo?.id !== "c-tb-combo" && rec.combo?.id !== "c-px-4", rec.combo?.id);
+  }
+});
+
+test("a verified fixed Panda plate lists its half-and-half base and doubled entree", async () => {
+  // Rice and greens (0.5 each) + 2x orange: 260 + 45 + 980 = 1285 cal. Price $1 so it wins on cost.
+  const plate = fixedCombo("c-px-6", "Panda Express", "#6 Plate", 1, {
+    source: "mock",
+    verified: true,
+    components: [
+      { meal: "px-rice", servings: 0.5 },
+      { meal: "px-greens", servings: 0.5 },
+      { meal: "px-orange", servings: 2 }
+    ]
+  });
+  const result = await recommend(data({ menu: { items: ITEMS, combos: [plate] } }), {
+    at: NOON_WED,
+    locationId: "loc-panda",
+    mealsRemaining: 1
+  });
+  const rec = result.recommendations[0];
+  assert.equal(rec?.combo?.id, "c-px-6");
+  assert.deepEqual(
+    rec?.items.filter((i) => i.combo_part !== null).map((i) => [i.meal_id, i.quantity, i.combo_part]),
+    [
+      ["px-orange", 2, "entree"],
+      ["px-rice", 0.5, "base"],
+      ["px-greens", 0.5, "base"]
+    ]
+  );
+  const extra = rec?.items.filter((i) => i.combo_part === null) ?? [];
+  assert.ok(extra.every((i) => i.meal_role === "side"), "only a side can be added to a combo here");
+  assert.equal(rec?.nutrition.calories, 1285 + extra.length * 200);
+});
+
+test("fixed combos give the same output for the same or reordered inputs", async () => {
+  const reordered = {
+    ...SANDWICH_MEAL,
+    contents: {
+      ...(SANDWICH_MEAL.contents as ComboContents),
+      components: [
+        { meal: "cfa-sandwich", servings: 1 },
+        { slot: "side" as const, choices: ["cfa-fries", "cfa-fruit"], default: "cfa-fries" },
+        { slot: "drink" as const, choices: ["cfa-tea"], default: "cfa-tea" }
+      ]
+    }
+  };
+  const first = await recommend(cfaData(), { at: NOON_WED, limit: 10 });
+  const second = await recommend(
+    cfaData([reordered], { menu: { items: [...CFA_ITEMS].reverse(), combos: [reordered] } }),
+    { at: NOON_WED, limit: 10 }
+  );
+  assert.deepEqual(second, first);
 });

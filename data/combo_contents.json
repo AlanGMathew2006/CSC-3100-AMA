@@ -1,0 +1,727 @@
+{
+  "chick-fil-a--combo--bacon-egg-and-cheese-biscuit-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--bacon-egg-cheese-biscuit",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--bacon-egg-and-cheese-muffin-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--bacon-egg-cheese-muffin",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chick-fil-a-chicken-biscuit-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chick-fil-a-chicken-biscuit",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chick-fil-a-chicken-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--chick-fil-a-chicken-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "chick-fil-a--combo--chick-fil-a-deluxe-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--chick-fil-a-deluxe-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "chick-fil-a--combo--chick-fil-a-nuggets-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chick-fil-a-nuggets-8-ct",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "The meal name doesn't give a size; the 8 ct row is assumed (Grubhub lists one price for the item) and needs checking (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chick-n-minis-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chick-n-minis-4-ct",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chicken-and-waffles-breakfast-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chicken-and-waffles-breakfast-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chicken-and-waffles-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": false,
+    "components": [
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "No lunch Chicken and Waffles Sandwich row in menu_items.csv (only the breakfast sandwich, which Grubhub prices differently), so the entree is unknown (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chicken-egg-and-cheese-biscuit-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chicken-egg-cheese-biscuit",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--chicken-egg-and-cheese-muffin-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--chicken-egg-cheese-muffin",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--egg-white-grill-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--egg-white-grill",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--grilled-chicken-club-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--grilled-chicken-club-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "chick-fil-a--combo--grilled-chicken-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--grilled-chicken-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "chick-fil-a--combo--grilled-nuggets-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--grilled-nuggets-8-ct",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "The meal name doesn't give a size; the 8 ct row is assumed (Grubhub lists one price for the item) and needs checking (DATA_TODO)."
+  },
+  "chick-fil-a--combo--hash-brown-scramble-bowl-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--hash-brown-scramble-bowl",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--hash-brown-scramble-burrito-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--hash-brown-scramble-burrito",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--sausage-egg-and-cheese-biscuit-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--sausage-egg-cheese-biscuit",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--sausage-egg-and-cheese-muffin-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--sausage-egg-cheese-muffin",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--spicy-chicken-biscuit-meal": {
+    "source": "data/menu_combos.csv row \"Breakfast meal: entree + side + drink\" (entree = matching Breakfast row; Chick-n-Minis: Grubhub sells only the 4 ct)",
+    "verified": false,
+    "components": [
+      {
+        "meal": "chick-fil-a--spicy-chicken-biscuit",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--hash-brown"
+        ],
+        "default": "chick-fil-a--hash-brown"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ],
+    "notes": "Which side and drink a breakfast meal includes is not in our data (Waffle Potato Fries may not be offered at breakfast); Hash Brown and the drink are unverified placeholders until checked in Grubhub (DATA_TODO)."
+  },
+  "chick-fil-a--combo--spicy-chicken-deluxe-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--spicy-deluxe-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "chick-fil-a--combo--spicy-chicken-sandwich-meal": {
+    "source": "data/menu_combos.csv row \"Lunch meal: entree + side + drink\" (entree = matching Entrees row; side and drink are the defaults only)",
+    "verified": true,
+    "components": [
+      {
+        "meal": "chick-fil-a--spicy-chicken-sandwich",
+        "servings": 1
+      },
+      {
+        "slot": "side",
+        "choices": [
+          "chick-fil-a--waffle-potato-fries-medium"
+        ],
+        "default": "chick-fil-a--waffle-potato-fries-medium"
+      },
+      {
+        "slot": "drink",
+        "choices": [
+          "chick-fil-a--sweetened-iced-tea-medium"
+        ],
+        "default": "chick-fil-a--sweetened-iced-tea-medium"
+      }
+    ]
+  },
+  "panda-express--combo--1-plate": {
+    "source": "data/menu_combos.csv row \"Fried Rice + Chow Mein, Orange Chicken, Broccoli Beef\"",
+    "verified": true,
+    "components": [
+      {
+        "meal": "panda-express--fried-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--chow-mein",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--the-original-orange-chicken",
+        "servings": 1
+      },
+      {
+        "meal": "panda-express--broccoli-beef",
+        "servings": 1
+      }
+    ]
+  },
+  "panda-express--combo--2-plate": {
+    "source": "data/menu_combos.csv row \"Fried Rice + Chow Mein, Orange Chicken, Kung Pao Chicken\"",
+    "verified": true,
+    "components": [
+      {
+        "meal": "panda-express--fried-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--chow-mein",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--the-original-orange-chicken",
+        "servings": 1
+      },
+      {
+        "meal": "panda-express--kung-pao-chicken",
+        "servings": 1
+      }
+    ]
+  },
+  "panda-express--combo--3-plate": {
+    "source": "data/menu_combos.csv row \"Fried Rice + Chow Mein, Orange Chicken, Teriyaki Chicken\"",
+    "verified": true,
+    "components": [
+      {
+        "meal": "panda-express--fried-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--chow-mein",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--the-original-orange-chicken",
+        "servings": 1
+      },
+      {
+        "meal": "panda-express--grilled-teriyaki-chicken",
+        "servings": 1
+      }
+    ]
+  },
+  "panda-express--combo--4-plate": {
+    "source": "data/menu_combos.csv row \"Fried Rice + Chow Mein, Orange Chicken (as listed)\"",
+    "verified": false,
+    "components": [
+      {
+        "meal": "panda-express--fried-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--chow-mein",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--the-original-orange-chicken",
+        "servings": 1
+      }
+    ],
+    "notes": "The CSV lists only one entree for a 2-entree plate; the second entree is unknown (DATA_TODO)."
+  },
+  "panda-express--combo--5-plate": {
+    "source": "data/menu_combos.csv row \"Fried Rice + Chow Mein, Orange Chicken, Honey Walnut Shrimp\"",
+    "verified": true,
+    "components": [
+      {
+        "meal": "panda-express--fried-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--chow-mein",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--the-original-orange-chicken",
+        "servings": 1
+      },
+      {
+        "meal": "panda-express--honey-walnut-shrimp",
+        "servings": 1
+      }
+    ]
+  },
+  "panda-express--combo--6-plate": {
+    "source": "data/menu_combos.csv row \"White Steamed Rice + Super Greens, double Teriyaki Chicken\"",
+    "verified": true,
+    "components": [
+      {
+        "meal": "panda-express--white-steamed-rice",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--super-greens-as-base",
+        "servings": 0.5
+      },
+      {
+        "meal": "panda-express--grilled-teriyaki-chicken",
+        "servings": 2
+      }
+    ]
+  },
+  "taco-bell--combo--2-chicken-chalupas-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-crunchy-taco-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-crunchy-taco-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-doritos-locos-tacos-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-doritos-locos-tacos-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-soft-taco-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--3-soft-taco-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--burrito-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--chicken-quesadilla-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  },
+  "taco-bell--combo--crunchwrap-supreme-combo": {
+    "source": "data/menu_combos.csv row \"Includes a drink; see Grubhub item details for exact contents\"",
+    "verified": false,
+    "components": [],
+    "notes": "Exact food items and the included drink (and its size) are not in our data; there are no Taco Bell drinks in menu_items.csv (DATA_TODO)."
+  }
+}

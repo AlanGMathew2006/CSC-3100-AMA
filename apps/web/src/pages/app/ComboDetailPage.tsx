@@ -1,5 +1,14 @@
 import { useState } from "react";
-import { isBuildYourOwnCombo, sumMacros, type MenuCombo, type MenuItem } from "@csc-3100-ama/shared";
+import {
+  comboNutrition,
+  comboParts,
+  isBuildYourOwnCombo,
+  sumMacros,
+  type ComboSlot,
+  type MenuCombo,
+  type MenuItem,
+  type SlotPicks,
+} from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { OpenBadge } from "../../components/MealCard";
@@ -9,6 +18,10 @@ import { comboLog, type ComboPick } from "../../lib/mealLog";
 import { servingLabel, servingStatusText } from "../../lib/serving";
 
 const money = (amount: number) => `$${amount.toFixed(2)}`;
+const SLOT_LABELS: Record<ComboSlot, string> = { side: "Side", drink: "Drink" };
+// "½ Fried Rice", "2× Teriyaki Chicken", "Chow Mein".
+const servingsLabel = (servings: number, name: string) =>
+  servings === 0.5 ? `½ ${name}` : servings === 1 ? name : `${servings}× ${name}`;
 const byName = (a: MenuItem, b: MenuItem) => a.name.localeCompare(b.name);
 
 function ChoiceSelect({
@@ -40,7 +53,9 @@ function ChoiceSelect({
 }
 
 // A combo from Explore's "Combos & Meals". A Bowl / Plate / Bigger Plate lets the user pick the
-// base(s) and entrees and logs them as one entry at the combo price.
+// base(s) and entrees; a fixed combo with verified contents lists them and lets the user change
+// its side/drink. Either is logged as one entry at the combo price. Unverified combos can still be
+// logged, with nutrition unavailable.
 export function ComboDetailPage({
   combo,
   onBack,
@@ -63,6 +78,14 @@ export function ComboDetailPage({
   const [baseId, setBaseId] = useState("");
   const [secondBaseId, setSecondBaseId] = useState(""); // "" = a full serving of one base
   const [entreeIds, setEntreeIds] = useState<string[]>(() => Array(entreeCount).fill(""));
+  const [slotPicks, setSlotPicks] = useState<SlotPicks>({});
+  const verified = !buildYourOwn && combo.contents?.verified === true;
+  const fixedParts = verified ? comboParts(combo, menu?.items ?? [], slotPicks) : [];
+  // Every part must be in the menu to show or log its nutrition.
+  const fixedPicks: ComboPick[] | null =
+    fixedParts.length && fixedParts.every((part) => part.item)
+      ? fixedParts.flatMap((part) => (part.item ? [{ item: part.item, servings: part.servings }] : []))
+      : null;
 
   const find = (id: string) => parts.find((item) => item.id === id);
   const base = find(baseId);
@@ -82,13 +105,19 @@ export function ComboDetailPage({
         ...chosenEntrees.flatMap((item) => (item ? [{ item, servings: 1 }] : [])),
       ]
     : [];
-  const totals = complete ? sumMacros(picks) : null;
+  const totals = buildYourOwn
+    ? complete
+      ? sumMacros(picks)
+      : null
+    : verified
+      ? comboNutrition(combo, menu?.items ?? [], slotPicks)
+      : null;
   const location = combo.locations?.[0];
   const serving = servingLabel(combo);
   const servingStatus = servingStatusText(combo.serving_windows, combo.availability);
 
   async function handleAdd() {
-    if (await log.addMeal(comboLog(combo, buildYourOwn ? picks : null))) {
+    if (await log.addMeal(comboLog(combo, buildYourOwn ? picks : fixedPicks))) {
       onToast("Added to today");
       onBack();
     }
@@ -156,17 +185,48 @@ export function ComboDetailPage({
                 />
               ))}
             </section>
+          ) : verified ? (
+            <section className="goal-fit-card" aria-labelledby="combo-contents-heading">
+              <h2 id="combo-contents-heading">What&apos;s in this combo</h2>
+              {fixedParts.map((part, index) => {
+                const component = combo.contents?.components[index];
+                const name = part.item?.name ?? "Item unavailable";
+                if (component && "slot" in component && component.choices.length > 1) {
+                  return (
+                    <ChoiceSelect
+                      key={component.slot}
+                      label={SLOT_LABELS[component.slot]}
+                      value={part.meal_id}
+                      options={component.choices.flatMap((id) => {
+                        const choice = menu?.items.find((item) => item.id === id);
+                        return choice ? [choice] : [];
+                      })}
+                      placeholder="Choose one"
+                      onChange={(id) => setSlotPicks((current) => ({ ...current, [component.slot]: id }))}
+                    />
+                  );
+                }
+                return (
+                  <p key={`${part.meal_id}-${index}`}>
+                    <span aria-hidden="true">✓</span>{" "}
+                    {part.slot ? `${SLOT_LABELS[part.slot]}: ${name}` : servingsLabel(part.servings, name)}
+                  </p>
+                );
+              })}
+              <p className="field-helper">Source: {combo.contents?.source}</p>
+            </section>
           ) : (
             <section className="goal-fit-card" aria-labelledby="combo-contents-heading">
               <h2 id="combo-contents-heading">What&apos;s in this combo</h2>
-              <p>Contents coming soon</p>
+              <p>Contents unverified</p>
+              {combo.contents?.notes && <p className="field-helper">{combo.contents.notes}</p>}
               <p className="field-helper">
                 You can still log it. Its nutrition is unavailable, so it won&apos;t count toward your macros.
               </p>
             </section>
           )}
 
-          {buildYourOwn && (
+          {(buildYourOwn || verified) && (
             <div className="detail-nutrition-grid">
               {(
                 [
@@ -177,7 +237,7 @@ export function ComboDetailPage({
                 ] as const
               ).map(([label, amount, unit]) => (
                 <div className="detail-nutrition" key={label}>
-                  <strong>{amount == null ? "—" : `${amount}${unit}`}</strong>
+                  <strong>{amount != null ? `${amount}${unit}` : totals ? "unavailable" : "—"}</strong>
                   <span>{label}</span>
                 </div>
               ))}

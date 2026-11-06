@@ -9,9 +9,11 @@ import {
   MACROS,
   servingWindowStatus,
   startOfDiningDay,
+  type ComboSlot,
   type DietaryPreferences,
   type Macro,
   type MacroValues,
+  type MealRole,
   type MealTargetsResponse,
   type MenuCombo,
   type MenuItem,
@@ -151,10 +153,36 @@ export interface ComboOption {
   entree_count: number;
 }
 
+// One choice for a fixed combo's side or drink slot (included in the combo price).
+export interface SlotChoiceOption {
+  id: string;
+  name: string;
+  nutrition: Nutrition;
+  role: MealRole;
+}
+
+// A fixed-content combo (Panda #1-#6 Plates, Chick-fil-A meals): fixed parts plus slots where
+// exactly one choice is picked.
+export interface FixedComboOption {
+  id: string;
+  name: string;
+  price: number;
+  parts: {
+    id: string;
+    name: string;
+    servings: number;
+    nutrition: Nutrition;
+    role: MealRole;
+    part: "base" | "entree";
+  }[];
+  slots: { slot: ComboSlot; choices: SlotChoiceOption[] }[];
+}
+
 export interface ModelInput {
   standalone: StandaloneOption[];
   components: ComponentOption[];
   combos: ComboOption[];
+  fixedCombos?: FixedComboOption[];
   targets: MacroValues;
   budget: number;
   weights: ObjectiveWeights;
@@ -163,7 +191,9 @@ export interface ModelInput {
 export type ModelVariable =
   | { kind: "item"; option: StandaloneOption }
   | { kind: "combo"; option: ComboOption }
-  | { kind: "component"; option: ComponentOption };
+  | { kind: "component"; option: ComponentOption }
+  | { kind: "fixed_combo"; option: FixedComboOption }
+  | { kind: "slot_choice"; option: SlotChoiceOption; slot: ComboSlot };
 
 export interface BuiltModel {
   lp: string;
@@ -193,13 +223,30 @@ function linear(terms: [number, string][]): string {
     .join(" ");
 }
 
+// Fixed parts' nutrition, each times its servings.
+const fixedNutrition = (combo: FixedComboOption): Nutrition =>
+  Object.fromEntries(
+    MACROS.map((m) => [
+      m,
+      combo.parts.reduce((sum, part) => sum + part.nutrition[m] * part.servings, 0)
+    ])
+  ) as Nutrition;
+
 // Builds the goal-programming MILP for one location as CPLEX LP text.
 // Returns null when no meal is possible (every meal needs a main or a combo).
 export function buildModel(input: ModelInput): BuiltModel | null {
   const standalone = byId(input.standalone);
   const components = input.combos.length ? byId(input.components) : [];
   const combos = components.length ? byId(input.combos) : [];
-  if (!standalone.some((o) => o.role === "main") && combos.length === 0)
+  const fixedCombos = byId(input.fixedCombos ?? []).map((combo) => ({
+    ...combo,
+    slots: combo.slots.map((slot) => ({ ...slot, choices: byId(slot.choices) }))
+  }));
+  if (
+    !standalone.some((o) => o.role === "main") &&
+    combos.length === 0 &&
+    fixedCombos.length === 0
+  )
     return null;
 
   const variables: Record<string, ModelVariable> = {};
@@ -215,6 +262,21 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     variables[`z${i}`] = { kind: "component", option };
     return `z${i}`;
   });
+  // w_m = 1 when fixed combo m is picked; s_{m,k,j} = 1 when choice j fills its slot k.
+  const w = fixedCombos.map((option, i) => {
+    variables[`w${i}`] = { kind: "fixed_combo", option };
+    return `w${i}`;
+  });
+  const s = fixedCombos.flatMap((combo, i) =>
+    combo.slots.flatMap((slot, k) =>
+      slot.choices.map((option, j) => {
+        const name = `s${i}_${k}_${j}`;
+        variables[name] = { kind: "slot_choice", option, slot: slot.slot };
+        return { name, combo: i, slotIndex: k, slot: slot.slot, option };
+      })
+    )
+  );
+  const fixed = fixedCombos.map(fixedNutrition);
 
   const budget = input.budget;
   const objective: [number, string][] = [];
@@ -231,6 +293,8 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     const terms: [number, string][] = [
       ...standalone.map((o, i): [number, string] => [o.nutrition[macro], x[i] as string]),
       ...components.map((o, i): [number, string] => [o.nutrition[macro], z[i] as string]),
+      ...fixed.map((n, i): [number, string] => [n[macro], w[i] as string]),
+      ...s.map((v): [number, string] => [v.option.nutrition[macro], v.name]),
       [-1, `over_${macro}`],
       [1, `under_${macro}`]
     ];
@@ -240,17 +304,21 @@ export function buildModel(input: ModelInput): BuiltModel | null {
   // Cost term keeps the result from being just the cheapest meal (CONTEXT.md rule 5).
   const costTerms: [number, string][] = [
     ...standalone.map((o, i): [number, string] => [o.price, x[i] as string]),
-    ...combos.map((o, i): [number, string] => [o.price, y[i] as string])
+    ...combos.map((o, i): [number, string] => [o.price, y[i] as string]),
+    ...fixedCombos.map((o, i): [number, string] => [o.price, w[i] as string])
   ];
   for (const [price, name] of costTerms) {
     objective.push([(input.weights.lambda * price) / budget, name]);
   }
   constraints.push(`budget: ${linear(costTerms)} <= ${num(budget)}`);
 
-  if (combos.length) {
+  // At most one combo of any kind per meal.
+  if (y.length || w.length) {
     constraints.push(
-      `one_combo: ${linear(y.map((name): [number, string] => [1, name]))} <= 1`
+      `one_combo: ${linear([...y, ...w].map((name): [number, string] => [1, name]))} <= 1`
     );
+  }
+  if (combos.length) {
     for (const part of ["base", "entree"] as const) {
       const count = (c: ComboOption) =>
         part === "base" ? c.base_count : c.entree_count;
@@ -266,14 +334,30 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     }
   }
 
-  // Every meal has 1-2 mains (a combo counts as one), at most one side and one drink.
-  const ofRole = (role: RecommendableRole) =>
-    standalone.flatMap((o, i): [number, string][] =>
+  // A picked fixed combo fills each of its slots with exactly one choice.
+  fixedCombos.forEach((combo, i) =>
+    combo.slots.forEach((slot, k) => {
+      const terms: [number, string][] = [
+        ...s
+          .filter((v) => v.combo === i && v.slotIndex === k)
+          .map((v): [number, string] => [1, v.name]),
+        [-1, w[i] as string]
+      ];
+      constraints.push(`slot_${w[i]}_${slot.slot}: ${linear(terms)} = 0`);
+    })
+  );
+
+  // Every meal has 1-2 mains (a combo counts as one), at most one side and one drink. A fixed
+  // combo's side and drink slots count as its side and drink.
+  const ofRole = (role: RecommendableRole) => [
+    ...standalone.flatMap((o, i): [number, string][] =>
       o.role === role ? [[1, x[i] as string]] : []
-    );
+    ),
+    ...s.flatMap((v): [number, string][] => (v.slot === role ? [[1, v.name]] : []))
+  ];
   const mains = [
     ...ofRole("main"),
-    ...y.map((name): [number, string] => [1, name])
+    ...[...y, ...w].map((name): [number, string] => [1, name])
   ];
   constraints.push(`min_mains: ${linear(mains)} >= 1`);
   constraints.push(`max_mains: ${linear(mains)} <= ${MAX_MAINS}`);
@@ -281,7 +365,7 @@ export function buildModel(input: ModelInput): BuiltModel | null {
     const terms = ofRole(role);
     if (terms.length) constraints.push(`max_${role}s: ${linear(terms)} <= 1`);
   }
-  const counted = [...x, ...y].map((name): [number, string] => [1, name]);
+  const counted = [...x, ...y, ...w].map((name): [number, string] => [1, name]);
   constraints.push(`max_items: ${linear(counted)} <= ${MAX_ITEMS}`);
 
   const maxParts = Math.max(
@@ -298,13 +382,15 @@ export function buildModel(input: ModelInput): BuiltModel | null {
 
   const lines = [
     "Minimize",
-    ` obj: ${linear(objective) || `0 ${x[0] ?? y[0]}`}`,
+    ` obj: ${linear(objective) || `0 ${x[0] ?? y[0] ?? w[0]}`}`,
     "Subject To",
     ...constraints.map((c) => ` ${c}`),
     "Bounds",
     ...bounds,
     ...(x.length || z.length ? ["Generals", ` ${[...x, ...z].join(" ")}`] : []),
-    ...(y.length ? ["Binaries", ` ${y.join(" ")}`] : []),
+    ...(y.length || w.length
+      ? ["Binaries", ` ${[...y, ...w, ...s.map((v) => v.name)].join(" ")}`]
+      : []),
     "End"
   ];
   return { lp: lines.join("\n"), variables };
@@ -387,9 +473,47 @@ const fullNutrition = (item: MenuItem): Nutrition | null =>
       ) as Nutrition)
     : null;
 
-// isBuildYourOwnCombo (shared): Bowl / Plate / Bigger Plate, where the customer picks the contents.
-// TODO: fixed-content combos (Panda #1-#6 Plates, Taco Bell and Chick-fil-A meals) are skipped for
-// now because their exact contents aren't in the data.
+// Combos come in two kinds. Build-your-own (isBuildYourOwnCombo in shared: Bowl / Plate / Bigger
+// Plate) are filled from the restaurant's base and entree servings. Fixed-content combos (Panda
+// #1-#6 Plates, Chick-fil-A meals) use their contents from data/combo_contents.json, and only when
+// those are verified; Taco Bell combos and Panda #4 are not verified yet, so they are never used.
+// Every fixed part and slot choice must pass the same filters as a standalone item.
+function fixedComboOption(
+  combo: MenuCombo,
+  allowed: Map<string, MenuItem>
+): FixedComboOption | null {
+  const contents = combo.contents;
+  if (!contents?.verified || isBuildYourOwnCombo(combo)) return null;
+  const parts: FixedComboOption["parts"] = [];
+  const slots: FixedComboOption["slots"] = [];
+  for (const component of contents.components) {
+    if ("meal" in component) {
+      const item = allowed.get(component.meal);
+      const nutrition = item && fullNutrition(item);
+      if (!item || !nutrition) return null; // a part is filtered out or has unknown nutrition
+      parts.push({
+        id: item.id,
+        name: item.name,
+        servings: component.servings,
+        nutrition,
+        role: item.meal_role ?? "main",
+        part: item.meal_component ?? "entree"
+      });
+      continue;
+    }
+    // An unavailable choice is dropped; a slot with no choice left makes the combo ineligible.
+    const choices = component.choices.flatMap((id): SlotChoiceOption[] => {
+      const item = allowed.get(id);
+      const nutrition = item && fullNutrition(item);
+      return item && nutrition
+        ? [{ id: item.id, name: item.name, nutrition, role: item.meal_role ?? component.slot }]
+        : [];
+    });
+    if (choices.length === 0) return null;
+    slots.push({ slot: component.slot, choices });
+  }
+  return { id: combo.id, name: combo.name, price: Number(combo.price), parts, slots };
+}
 
 export function computeMealTargets(
   data: RecommendationData,
@@ -487,13 +611,42 @@ function toRecommendation(
   for (const [name, variable] of Object.entries(model.variables)) {
     const quantity = solution.values[name] ?? 0;
     if (quantity <= 0) continue;
-    if (variable.kind === "combo") {
+    if (variable.kind === "combo" || variable.kind === "fixed_combo") {
       combo = {
         id: variable.option.id,
         name: variable.option.name,
         price: variable.option.price
       };
       totalPrice += variable.option.price;
+      if (variable.kind === "combo") continue;
+      // Fixed parts are listed like build-your-own parts: priced "in combo".
+      for (const part of variable.option.parts) {
+        for (const macro of MACROS)
+          nutrition[macro] += part.nutrition[macro] * part.servings;
+        items.push({
+          meal_id: part.id,
+          name: part.name,
+          quantity: part.servings,
+          unit_price: null,
+          combo_part: part.part,
+          meal_role: part.role
+        });
+        calories.set(items[items.length - 1] as RecommendationItem, part.nutrition.calories * part.servings);
+      }
+      continue;
+    }
+    if (variable.kind === "slot_choice") {
+      const { option } = variable;
+      for (const macro of MACROS) nutrition[macro] += option.nutrition[macro] * quantity;
+      items.push({
+        meal_id: option.id,
+        name: option.name,
+        quantity,
+        unit_price: null,
+        combo_part: variable.slot,
+        meal_role: option.role
+      });
+      calories.set(items[items.length - 1] as RecommendationItem, option.nutrition.calories * quantity);
       continue;
     }
     const { option } = variable;
@@ -602,6 +755,7 @@ export async function recommend(
   const allowed = data.menu.items.filter(
     (item) => isMealAllowed(item, prefs) && servedNow(item.serving_windows)
   );
+  const allowedById = new Map(allowed.map((item) => [item.id, item]));
   const recommendations: Recommendation[] = [];
 
   for (const location of candidates) {
@@ -647,10 +801,18 @@ export async function recommend(
           (c.entree_count === 0 || components.some((o) => o.part === "entree"))
       );
 
+    const fixedCombos = data.menu.combos
+      .filter(
+        (c) =>
+          c.restaurant === location.restaurant && servedNow(c.serving_windows)
+      )
+      .flatMap((c) => fixedComboOption(c, allowedById) ?? []);
+
     const model = buildModel({
       standalone,
       components,
       combos,
+      fixedCombos,
       targets: base.targets,
       budget: base.budget,
       weights

@@ -1,6 +1,6 @@
 // Imports the collected campus menu (data/menu_items.csv, data/menu_combos.csv) and
-// location hours (data/dining_hours.json), item serving windows (data/serving_windows.json) and
-// meal roles (data/meal_roles.json) into Supabase.
+// location hours (data/dining_hours.json), item serving windows (data/serving_windows.json),
+// meal roles (data/meal_roles.json) and fixed combo contents (data/combo_contents.json) into Supabase.
 //
 //   npm run import:menu -- --dry-run   # check the CSVs and print what would be written
 //   npm run import:menu                # write to Supabase (needs SUPABASE_SERVICE_ROLE_KEY in .env)
@@ -12,10 +12,12 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  applyComboContents,
   applyMealRoles,
   applyServingWindows,
   buildImportPlan,
   parseCsv,
+  toComboContents,
   toComboRecords,
   toHoursRecords,
   toItemRecords,
@@ -68,16 +70,21 @@ function summarize(plan: ImportPlan) {
   console.log(
     `  menu_combos:      ${plan.combos.length} (${windowed(plan.combos)} with a serving window)`
   );
+  const withContents = plan.combos.filter((combo) => combo.contents !== null);
+  console.log(
+    `                    ${withContents.length} with fixed contents (${withContents.filter((c) => c.contents?.verified).length} verified)`
+  );
 }
 
 async function main() {
   console.log(`Reading menu data from ${dataDir}`);
-  const [itemsCsv, combosCsv, hoursJson, windowsJson, rolesJson] = await Promise.all([
+  const [itemsCsv, combosCsv, hoursJson, windowsJson, rolesJson, contentsJson] = await Promise.all([
     readFile(path.join(dataDir, "menu_items.csv"), "utf8"),
     readFile(path.join(dataDir, "menu_combos.csv"), "utf8"),
     readFile(path.join(dataDir, "dining_hours.json"), "utf8"),
     readFile(path.join(dataDir, "serving_windows.json"), "utf8"),
-    readFile(path.join(dataDir, "meal_roles.json"), "utf8")
+    readFile(path.join(dataDir, "meal_roles.json"), "utf8"),
+    readFile(path.join(dataDir, "combo_contents.json"), "utf8")
   ]);
 
   const { items, problems: itemProblems } = toItemRecords(
@@ -115,7 +122,17 @@ async function main() {
       `meal_roles.json: fix the problems above${roles.missing.length ? `; no role for ${roles.missing.join(", ")}` : ""}`
     );
   }
-  const plan = roles.plan;
+  // Bad contents would put the wrong nutrition on a combo, so any problem stops the import.
+  const { contents, problems: contentsProblems } = toComboContents(
+    JSON.parse(contentsJson),
+    items.map((item) => item.sourceId),
+    combos
+  );
+  reportProblems("combo_contents.json", contentsProblems);
+  if (contentsProblems.length) {
+    throw new Error("combo_contents.json: fix the problems above");
+  }
+  const plan = applyComboContents(roles.plan, contents);
   for (const name of plan.unmatchedHours)
     console.warn(
       `  dining_hours.json has "${name}", which matches no location in menu_items.csv`

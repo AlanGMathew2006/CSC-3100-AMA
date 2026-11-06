@@ -1,6 +1,7 @@
 // Load stage of the menu import: writes an ImportPlan to Supabase.
 // Every write is an upsert on a stable key (location name, meal source_id,
-// meal+location+date, combo source_id), so re-running never creates duplicates.
+// meal+location+date, combo source_id), so re-running never creates duplicates. Combo contents
+// are written with every import (null for build-your-own combos).
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ImportPlan } from "./pipeline.js";
@@ -66,10 +67,31 @@ export async function load(db: SupabaseClient, plan: ImportPlan) {
     "Upserting menu_offerings"
   );
 
+  // Combo contents name meals by source_id in the data file; store meals.id instead.
+  const mealId = (sourceId: string) => {
+    const id = mealIds.get(sourceId);
+    if (!id) throw new Error(`Missing id for combo part ${sourceId}`);
+    return id;
+  };
+  const combos = plan.combos.map((combo) => ({
+    ...combo,
+    contents: combo.contents && {
+      ...combo.contents,
+      components: combo.contents.components.map((component) =>
+        "meal" in component
+          ? { ...component, meal: mealId(component.meal) }
+          : {
+              ...component,
+              choices: component.choices.map(mealId),
+              default: mealId(component.default)
+            }
+      )
+    }
+  }));
   check(
     await db
       .from("menu_combos")
-      .upsert(plan.combos, { onConflict: "source_id" }),
+      .upsert(combos, { onConflict: "source_id" }),
     "Upserting menu_combos"
   );
 }

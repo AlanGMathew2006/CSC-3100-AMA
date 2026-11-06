@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { load } from "./load.js";
 import {
+  applyComboContents,
   applyMealRoles,
   applyServingWindows,
   buildImportPlan,
   parseCsv,
   splitCampusAreas,
+  toComboContents,
   toComboRecords,
   toHoursRecords,
   toItemRecords,
@@ -470,6 +472,148 @@ test("applyMealRoles uses category rules and overrides, and reports meals with n
   assert.deepEqual(unmatched, ["cfa--gone"]);
 });
 
+// ---------- Combo contents ----------
+
+const CONTENT_COMBOS = toComboRecords([
+  { restaurant: "Panda Express", combo: "Plate", description: "1 base + 2 entrees", bases: "1", entrees: "2", price_usd: "11.3" },
+  { restaurant: "Panda Express", combo: "#1 Plate", description: "Rice, Chicken, Beef", bases: "1", entrees: "2", price_usd: "11.3" },
+  { restaurant: "Chick-fil-A", combo: "Sandwich Meal", description: "Lunch meal: entree + side + drink", price_usd: "11.55" }
+]).combos;
+const CONTENT_MEALS = ["px--rice", "px--chicken", "px--beef", "cfa--sandwich", "cfa--fries", "cfa--tea"];
+const GOOD_CONTENTS = {
+  "panda-express--combo--1-plate": {
+    source: "csv",
+    verified: true,
+    components: [
+      { meal: "px--rice", servings: 1 },
+      { meal: "px--chicken", servings: 1 },
+      { meal: "px--beef", servings: 1 }
+    ]
+  },
+  "chick-fil-a--combo--sandwich-meal": {
+    source: "csv",
+    verified: true,
+    components: [
+      { meal: "cfa--sandwich", servings: 1 },
+      { slot: "side", choices: ["cfa--fries"], default: "cfa--fries" },
+      { slot: "drink", choices: ["cfa--tea"], default: "cfa--tea" }
+    ]
+  }
+};
+
+test("toComboContents accepts fixed parts and slots, and build-your-own combos need no entry", () => {
+  const { contents, problems } = toComboContents(GOOD_CONTENTS, CONTENT_MEALS, CONTENT_COMBOS);
+  assert.deepEqual(problems, []);
+  assert.deepEqual([...contents.keys()], ["panda-express--combo--1-plate", "chick-fil-a--combo--sandwich-meal"]);
+  assert.equal(contents.get("chick-fil-a--combo--sandwich-meal")?.components.length, 3);
+  assert.equal(contents.get("panda-express--combo--1-plate")?.notes, null);
+});
+
+test("toComboContents reports unknown ids, bad servings, bad defaults and missing entries", () => {
+  const sandwich = GOOD_CONTENTS["chick-fil-a--combo--sandwich-meal"];
+  const cases: [unknown, string][] = [
+    [{ meal: "px--nope", servings: 1 }, 'unknown meal "px--nope"'],
+    [{ meal: "px--rice", servings: 0 }, "servings for px--rice must be a number > 0"],
+    [{ meal: "px--rice", servings: "1" }, "servings for px--rice must be a number > 0"],
+    [{ slot: "side", choices: ["cfa--fries"], default: "cfa--tea" }, "side default must be one of its choices"],
+    [{ slot: "side", choices: ["cfa--nope"], default: "cfa--nope" }, 'unknown meal "cfa--nope" in side choices'],
+    [{ slot: "side", choices: [], default: "cfa--fries" }, "side slot needs at least one choice"],
+    [{ slot: "dessert", choices: ["cfa--fries"], default: "cfa--fries" }, 'unknown slot "dessert"'],
+    [{ servings: 1 }, 'each component needs "meal" or "slot"']
+  ];
+  for (const [component, message] of cases) {
+    const { contents, problems } = toComboContents(
+      { "chick-fil-a--combo--sandwich-meal": { ...sandwich, components: [component] } },
+      CONTENT_MEALS,
+      CONTENT_COMBOS
+    );
+    assert.equal(contents.size, 0);
+    // The bad entry is dropped (and not reported twice); #1 Plate isn't in this file at all.
+    assert.deepEqual(
+      problems.map((p) => [p.id, p.message]),
+      [
+        ["chick-fil-a--combo--sandwich-meal", message],
+        ["panda-express--combo--1-plate", "fixed-content combo has no entry"]
+      ]
+    );
+  }
+
+  const { problems } = toComboContents(
+    {
+      ...GOOD_CONTENTS,
+      "panda-express--combo--plate": { source: "csv", verified: true, components: [] },
+      "taco-bell--combo--ghost": { source: "csv", verified: false, components: [] },
+      "chick-fil-a--combo--sandwich-meal": {
+        ...sandwich,
+        components: [...sandwich.components, { slot: "side", choices: ["cfa--fries"], default: "cfa--fries" }]
+      }
+    },
+    CONTENT_MEALS,
+    CONTENT_COMBOS
+  );
+  assert.deepEqual(
+    problems.map((p) => [p.id, p.message]),
+    [
+      ["chick-fil-a--combo--sandwich-meal", "duplicate slot"],
+      ["panda-express--combo--plate", "build-your-own combos have no fixed contents"],
+      ["taco-bell--combo--ghost", "matches no combo in menu_combos.csv"]
+    ]
+  );
+
+  const empty = toComboContents(
+    { "panda-express--combo--1-plate": { source: "csv", verified: true, components: [] } },
+    CONTENT_MEALS,
+    CONTENT_COMBOS
+  );
+  assert.deepEqual(empty.problems.map((p) => p.message), [
+    "verified contents need at least one component",
+    "fixed-content combo has no entry"
+  ]);
+  assert.deepEqual(
+    toComboContents([], CONTENT_MEALS, CONTENT_COMBOS).problems.map((p) => p.message),
+    ["expected an object keyed by combo source_id"]
+  );
+});
+
+test("re-running the load with combo contents stores meal ids and never duplicates", async () => {
+  const csv = [
+    HEADER,
+    "px--rice,Panda Express,1901 Marketplace,Bases,Rice,1,,520,,11,85,16,base,yes,,,2026-10-05,",
+    "px--chicken,Panda Express,1901 Marketplace,Entrees,Chicken,1,,490,,25,51,23,entree,yes,,,2026-10-05,",
+    "px--beef,Panda Express,1901 Marketplace,Entrees,Beef,1,,150,,9,13,7,entree,yes,,,2026-10-05,",
+    "cfa--sandwich,Chick-fil-A,1901 Marketplace,Entrees,Sandwich,1,6.49,420,,29,41,16,,yes,,,2026-10-05,",
+    "cfa--fries,Chick-fil-A,1901 Marketplace,Sides,Fries,1,3.45,420,,5,45,24,,yes,,,2026-10-05,",
+    "cfa--tea,Chick-fil-A,1901 Marketplace,Drinks,Tea,1,2.89,120,,0,31,0,,yes,,,2026-10-05,"
+  ].join("\n");
+  const { items } = toItemRecords(parseCsv(csv));
+  const { contents } = toComboContents(GOOD_CONTENTS, items.map((i) => i.sourceId), CONTENT_COMBOS);
+  const plan = () => applyComboContents(buildImportPlan(items, CONTENT_COMBOS), contents);
+  assert.deepEqual(plan().combos.map((c) => [c.source_id, c.contents?.verified ?? null]), [
+    ["panda-express--combo--plate", null],
+    ["panda-express--combo--1-plate", true],
+    ["chick-fil-a--combo--sandwich-meal", true]
+  ]);
+
+  const { tables, db } = fakeDb();
+  await load(db, plan());
+  await load(db, plan());
+  const meals = new Map([...tables.get("meals")!.values()].map((m) => [m.source_id, m.id]));
+  const combos = [...tables.get("menu_combos")!.values()];
+  assert.equal(combos.length, 3);
+  const meal = combos.find((c) => c.source_id === "chick-fil-a--combo--sandwich-meal");
+  assert.deepEqual(meal?.contents, {
+    source: "csv",
+    verified: true,
+    notes: null,
+    components: [
+      { meal: meals.get("cfa--sandwich"), servings: 1 },
+      { slot: "side", choices: [meals.get("cfa--fries")], default: meals.get("cfa--fries") },
+      { slot: "drink", choices: [meals.get("cfa--tea")], default: meals.get("cfa--tea") }
+    ]
+  });
+  assert.equal(combos.find((c) => c.source_id === "panda-express--combo--plate")?.contents, null);
+});
+
 test("the real data files import without problems", () => {
   const dataDir = path.resolve(
     path.dirname(fileURLToPath(import.meta.url)),
@@ -597,4 +741,33 @@ test("the real data files import without problems", () => {
     33
   );
   assert.equal(plan.combos.length, 41);
+
+  // Every fixed-content combo has contents; only verified ones are recommended.
+  const contents = toComboContents(
+    JSON.parse(readFileSync(path.join(dataDir, "combo_contents.json"), "utf8")),
+    items.items.map((item) => item.sourceId),
+    combos.combos
+  );
+  assert.deepEqual(contents.problems, []);
+  assert.equal(contents.contents.size, 38);
+  const verified = [...contents.contents].filter(([, c]) => c.verified).map(([id]) => id);
+  assert.deepEqual(verified.sort(), [
+    "chick-fil-a--combo--chick-fil-a-chicken-sandwich-meal",
+    "chick-fil-a--combo--chick-fil-a-deluxe-sandwich-meal",
+    "chick-fil-a--combo--grilled-chicken-club-sandwich-meal",
+    "chick-fil-a--combo--grilled-chicken-sandwich-meal",
+    "chick-fil-a--combo--spicy-chicken-deluxe-sandwich-meal",
+    "chick-fil-a--combo--spicy-chicken-sandwich-meal",
+    "panda-express--combo--1-plate",
+    "panda-express--combo--2-plate",
+    "panda-express--combo--3-plate",
+    "panda-express--combo--5-plate",
+    "panda-express--combo--6-plate"
+  ]);
+  const six = contents.contents.get("panda-express--combo--6-plate");
+  assert.deepEqual(six?.components, [
+    { meal: "panda-express--white-steamed-rice", servings: 0.5 },
+    { meal: "panda-express--super-greens-as-base", servings: 0.5 },
+    { meal: "panda-express--grilled-teriyaki-chicken", servings: 2 }
+  ]);
 });

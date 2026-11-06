@@ -20,6 +20,37 @@ Re-check them at the start of each quarter and before breaks.
 - [ ] Check Chick-fil-A "Mini Yeast Rolls (4 ct)". It is in the Breakfast category so it gets the
   breakfast window, but it may be sold all day. If so, add an override with `"windows": null`.
 
+## Combo contents (`data/combo_contents.json`)
+
+Each fixed-content combo has an entry keyed by its source_id. Only entries with `"verified": true`
+are recommended or show nutrition in Explore; the rest show "Contents unverified" and can only be
+logged without nutrition. After fixing an entry, set `"verified": true`, update `"source"`, re-run
+`npm run import:menu -- --dry-run` (it checks every id) and then `npm run import:menu`.
+
+- [ ] **Panda #4 Plate: second entree.** menu_combos.csv lists "Fried Rice + Chow Mein, Orange
+  Chicken (as listed)" for a 2-entree plate. Check the Grubhub campus app and add the second entree.
+- [ ] **Taco Bell combos (all 10): exact contents.** The CSV only says "Includes a drink; see Grubhub
+  item details for exact contents". For each combo, check in the Grubhub campus app: which food
+  items and how many (e.g. which 3 tacos, beef or chicken), and which drink is included and its
+  size. There are no Taco Bell drinks in menu_items.csv yet, so add those rows (with official
+  nutrition) first. Combos: 3 Crunchy Taco Combo, 3 Crunchy Taco Supreme Combo, Chicken Quesadilla
+  Combo, 3 Soft Taco Combo, 3 Soft Taco Supreme Combo, 3 Doritos Locos Tacos Combo, 3 Doritos Locos
+  Tacos Supreme Combo, Crunchwrap Supreme Combo, Burrito Supreme Combo, 2 Chicken Chalupas Supreme
+  Combo.
+- [ ] **Chick-fil-A Nuggets Meal and Grilled Nuggets Meal: nugget count.** The meal names don't give a
+  size, so the 8 ct rows are used as placeholders (Grubhub lists one price for the item, assumed to
+  be the 8 ct). Confirm the count in Grubhub.
+- [ ] **Chick-fil-A Chicken and Waffles Sandwich Meal (lunch): entree.** menu_items.csv only has the
+  breakfast Chicken and Waffles Sandwich, which Grubhub prices differently ($10.35 for the lunch
+  version), so there is no matching lunch entree row. Add one (price + official nutrition), then
+  reference it.
+- [ ] **Chick-fil-A breakfast meals (13): side and drink.** Waffle Potato Fries may not be offered
+  at breakfast, so these use Hash Brown and Sweetened Iced Tea (Medium) as placeholders and stay
+  unverified. Check in Grubhub which side and drink (and size) a breakfast meal includes.
+- [ ] **CFA meal side/drink substitutions.** Lunch meals list only the defaults (side: Waffle Potato
+  Fries (Medium), drink: Sweetened Iced Tea (Medium)). Check in Grubhub which other sides and drinks
+  can be chosen at no extra charge (and their sizes) and add them to each slot's `choices`.
+
 ## Missing prices (`price_usd` in `data/menu_items.csv`)
 
 47 items have no `price_usd`. They import as meals with no offering, so the app shows
