@@ -20,7 +20,8 @@ export interface RecommendationItem {
   quantity: number;
   // Standalone price each; null for parts of a combo (the combo carries the price).
   unit_price: number | null;
-  combo_part: "base" | "entree" | null;
+  // Which part of the combo this is; side and drink are a fixed combo's slot picks.
+  combo_part: "base" | "entree" | "side" | "drink" | null;
   meal_role: MealRole;
 }
 

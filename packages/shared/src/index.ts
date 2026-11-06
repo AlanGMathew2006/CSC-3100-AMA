@@ -1,4 +1,5 @@
 // Shared utilities and types used across apps/packages.
+import type { ComboContents } from "./combos.js";
 import type { ItemAvailability, OpenStatus, ServingWindows } from "./hours.js";
 
 export * from "./combos.js";
@@ -79,6 +80,9 @@ export interface MenuCombo {
   entree_count: number | null;
   price: number;
   serving_windows?: ServingWindows;
+  // Fixed-content combos only (Panda #1-#6, Chick-fil-A and Taco Bell meals); null for
+  // build-your-own combos.
+  contents?: ComboContents | null;
   // Across the restaurant's locations: available if any is serving it now.
   availability?: ItemAvailability;
   locations?: MenuLocationStatus[];

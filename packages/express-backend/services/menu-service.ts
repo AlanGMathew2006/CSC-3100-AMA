@@ -138,7 +138,7 @@ export async function getMenu(
     db
       .from("menu_combos")
       .select(
-        "id, restaurant, name, description, base_count, entree_count, price, serving_windows"
+        "id, restaurant, name, description, base_count, entree_count, price, serving_windows, contents"
       )
       .order("restaurant")
       .order("price"),

@@ -197,6 +197,7 @@ create trigger menu_combos_set_updated_at
   for each row execute function public.set_updated_at();
 
 alter table public.menu_combos add column if not exists serving_windows jsonb;
+alter table public.menu_combos add column if not exists contents jsonb;
 
 alter table public.menu_combos enable row level security;
 drop policy if exists "Authenticated read menu combos" on public.menu_combos;
