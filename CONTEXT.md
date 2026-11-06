@@ -147,27 +147,44 @@ Implemented in packages/express-backend/services/recommendation-service.ts
    location. Meals must have nutrition data, pass the dietary and
    allergen filters (isMealAllowed), be served right now (item serving
    windows, e.g. breakfast until 10:30; an unknown serving time is
-   excluded), and have a price there, or be a Panda base/entree used in
-   a Bowl, Plate, or Bigger Plate.
-4. For each location the model picks whole quantities, and every meal
+   excluded), and have a price there, or be part of a combo.
+4. Combos come in two kinds:
+   - Build-your-own (Panda Bowl, Plate, Bigger Plate): the model picks
+     exactly the combo's number of base and entree servings.
+   - Fixed contents (Panda #1-#6 Plates, Chick-fil-A meals), from
+     data/combo_contents.json: fixed parts (e.g. half Fried Rice, half
+     Chow Mein, Orange Chicken, Broccoli Beef) plus "slots" where one
+     choice is picked (a Chick-fil-A meal's side and drink). The slot
+     choice is included in the combo price. A fixed combo is only used
+     when its contents are verified (Taco Bell combos and Panda #4 are
+     not yet), the combo is served now, and every fixed part passes
+     the same filters as a standalone item. A slot choice that fails
+     the filters is dropped; if a slot has no choice left, the combo
+     can't be used.
+5. For each location the model picks whole quantities, and every meal
    is built around a main dish (meal roles from data/meal_roles.json):
-   1-2 mains, where a build-your-own combo (exactly its base and entree
-   count) counts as one; at most one side and one drink; never desserts
-   or sauces. Up to 2 of the same main, 1 of anything else, at most 4
-   items, and never over the budget.
+   1-2 mains, where any combo counts as one, and at most one combo of
+   any kind; at most one side and one drink, and a Chick-fil-A meal's
+   side and drink slots use those up; never desserts or sauces. Up to
+   2 of the same main, 1 of anything else, at most 4 items (a combo
+   counts as one), and never over the budget.
    It minimizes how far the meal lands from each target (going under
    and going over are each weighted, relative to the target) plus a
    small cost term, so the answer is not simply the cheapest meal.
-   Nutrition priorities change the weights: "High protein" penalizes
-   too little protein more, "Lower calorie" penalizes extra calories
-   more, "Budget-friendly" raises the cost weight.
-5. Locations are ranked by that objective (ties: lower cost, then
+   That cost term is also why a meal deal wins over buying the same
+   items separately. Nutrition priorities change the weights: "High
+   protein" penalizes too little protein more, "Lower calorie"
+   penalizes extra calories more, "Budget-friendly" raises the cost
+   weight.
+6. Locations are ranked by that objective (ties: lower cost, then
    name). Each result has the Macro Match score (0-100, see
    packages/shared/src/macro-match.ts), a per-macro breakdown, and a
-   one-line explanation built from it.
+   one-line explanation built from it. A combo's parts are listed as
+   items "in combo", so the app can show each part and combine their
+   allergens.
 
-The same inputs always give the same output. Fixed-content combos
-(Panda #1-#6 Plates, Taco Bell and Chick-fil-A meals) are not used yet.
+The same inputs always give the same output: meals, combos and slot
+choices are sorted by id before the model is built.
 
 # Data model expectations
 
