@@ -96,7 +96,8 @@ service-role key.
 # Authentication Sequence Diagram 
 
 1. New-Account Sequence Diagram
-<img width="1182" height="1073" alt="Poly Provision UML Diagram-New_Account_Sequence_Diagram drawio" src="https://github.com/user-attachments/assets/d6330d39-08c1-4f54-9d04-1bf470e227cd" />
+<img width="1182" height="1363" alt="Poly Provision UML Diagram-New_Account_Sequence_Diagram drawio (1)" src="https://github.com/user-attachments/assets/1f75f1ae-c009-4fef-8fbf-5ab50b83a060" />
+
 
 2. Sign-In Sequence Diagram
 <img width="1182" height="1073" alt="Poly Provision UML Diagram-Sign-In_Sequence_Diagram drawio" src="https://github.com/user-attachments/assets/0663fab6-bb7f-4ba0-9610-4a4228a479cb" />
