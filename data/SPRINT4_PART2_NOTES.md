@@ -23,7 +23,7 @@ fixed first.
 **PR description:**
 
 ```
-Closes #51
+Part of #51 (Panda Express and the Subway subs come in a follow-up PR, see "Left for a follow-up")
 
 ## What
 Verified allergens go from 33 to 120 of 192 items, each with its source in allergen_source.
@@ -55,6 +55,15 @@ Verified allergens go from 33 to 120 of 192 items, each with its source in aller
 - DATA_TODO: allergen section rewritten with what's verified, the sources used, and what's left
   (with what was tried).
 
+## Left for a follow-up PR
+- Panda Express: 0 of 20 verified. Needs the allergen PDF from pandaexpress.com, opened in a normal
+  browser.
+- Subway: the 46 regular subs (27 six-inch, 15 footlong, 4 Fresh Fit). Needs each sub's default
+  bread/cheese/sauce from its subway.com page, then the union of those rows in the allergen chart.
+- Also still open: Chick-fil-A Iced Coffee and Cold Brew Iced Coffee; Taco Bell Creamy Jalapeño
+  Sauce, Reduced-Fat Sour Cream, Chips & Guacamole and Side of Nacho Cheese.
+  data/DATA_TODO.md lists each one with what was tried.
+
 ## Effect on recommendations
 Same sample inputs as Sprint 4 (Wed Nov 4, 2 meals left, $25):
 - No allergens: no change.
@@ -78,7 +87,7 @@ Same sample inputs as Sprint 4 (Wed Nov 4, 2 meals left, $25):
 **PR description:**
 
 ```
-Closes #52
+Part of #52 (the Grubhub values come in a follow-up PR, filled in through data/manual_fill_in.csv)
 
 ## What
 No missing price, serving time or combo content could be verified without logging in to the
@@ -104,6 +113,11 @@ Grubhub campus app, so this makes the manual pass as quick as possible.
 - DATA_TODO points at the sheet and the command, with the value format for each kind of row.
 - CONTEXT.md: recommendation rule for free_with_meal.
 
+## Follow-up PR
+The 36 prices, 3 serving times and 58 combo-contents values need the logged-in Grubhub campus app.
+They'll be typed into data/manual_fill_in.csv and applied with npm run apply:fill-in in a follow-up
+PR, which will close #52.
+
 ## Deploy order
 Run packages/express-backend/supabase/migrations/20261113000000_meal_free_with_meal.sql in the
 Supabase SQL editor before deploying this backend (GET /api/menu selects free_with_meal), then
@@ -124,7 +138,8 @@ npm run import:menu from packages/express-backend.
 ### sprint4/recommendations-ui-polish (base: sprint4/prices-serving-times)
 
 - `20b9311` Add UI tests for recommendations and meal logging, and polish the UI
-- (this file) Add Sprint 4 part 2 notes
+- `ca6fec2` Add Sprint 4 part 2 notes
+- (latest) Update Sprint 4 part 2 PR notes
 
 **PR title:** UI tests and polish for recommendations, meal details and combos
 
@@ -177,6 +192,21 @@ Closes #53
   the updated lockfile.
 - No schema change.
 ```
+
+## Team setup after merge
+
+After these PRs are merged into main, everyone should:
+
+1. Supabase SQL editor (once per project, in this order; skip any already run):
+   1. `packages/express-backend/supabase/migrations/20261106000000_combo_contents.sql`
+   2. `packages/express-backend/supabase/migrations/20261113000000_meal_free_with_meal.sql`
+2. `npm install` from the repo root (new dev dependencies: Vitest, jsdom, Testing Library,
+   Playwright).
+3. `npm run import:menu` in `packages/express-backend` (loads the verified allergens, tags and
+   free_with_meal; `-- --dry-run` first to check).
+4. Web tests now run on Vitest: `npm test` works as before (tests import `describe`/`it` from
+   `vitest`, not `node:test`). `npm run test:e2e` in `apps/web` needs
+   `npx playwright install chromium` once per machine.
 
 ## 2. What's done per issue
 
