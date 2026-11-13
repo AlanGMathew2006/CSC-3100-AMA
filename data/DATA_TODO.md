@@ -128,196 +128,66 @@ Look up in Grubhub:
 
 ## Allergens and dietary tags (`allergens`, `tags`, `allergens_verified`, `allergen_source`)
 
-33 of 192 items are verified (Chick-fil-A item pages that state "This menu item contains: ...").
-The other 159 are `allergens_verified=no`. The app shows "Allergen info unavailable" for them, and
-anyone with an allergen, "No seafood", or "Halal-friendly" set won't see them as a match.
+**120 of 192 items are verified** (was 33): Chick-fil-A 76 of 78, Taco Bell 32 of 36, Subway 12 of 58,
+Panda Express 0 of 20. The other 72 are `allergens_verified=no`. The app shows "Allergen info unavailable"
+for them, and anyone with an allergen, "No seafood", or "Halal-friendly" set won't see them as a match.
+`scripts/menu-import/menu-data.test.ts` checks the real CSV (allowed tokens, a source on every verified
+row, tags only on verified rows, no vegan + milk/egg, no gluten_free + wheat) and the per-chain counts
+above, so update both together.
 
 To verify an item, fill in `allergens` (pipe-separated from milk|egg|wheat|soy|peanut|tree_nut|fish|shellfish|sesame),
 `tags` (from vegetarian|vegan|gluten_free|contains_pork), set `allergens_verified=yes`, and put the page or
 document you used in `allergen_source`. Only set vegetarian / vegan / gluten_free when the chain says so
-explicitly. No item has those tags yet, so the Vegetarian, Vegan and Gluten-free filters match nothing until
-they are filled in.
+explicitly. Tags can only be set on verified rows (the import rejects them otherwise).
 
-Why each chain is unverified (tried 2026-10-30):
+Sources used (2026-11-13):
 
-- **Taco Bell**: tacobell.com loads allergen info with JavaScript, so it couldn't be read. Use the
-  allergen filter on tacobell.com/nutrition/allergen-info or the Taco Bell app in a browser.
-- **Subway**: the official US allergen chart is
-  https://media.subway.com/dam/urn:aaid:aem:359a9f3d-2719-453b-9395-030f54968cbe/original/as/us-allergens-en.pdf
-  (October 2026). It lists ingredients (breads, meats, cheeses, sauces), not whole subs, so each sub's
-  allergens depend on its build. Decide which bread/cheese/sauce the default build uses (see the nutrition
-  source) and combine those rows.
-- **Panda Express**: pandaexpress.com/nutritioninformation returned HTTP 403. Use its allergen PDF in a browser.
-- **Chick-fil-A**: these item pages state no allergens (blank "contains" line, or no statement at all), have no
-  item page, or the CSV item doesn't match one page exactly. Check the Allergens tab on chick-fil-a.com.
+- **Chick-fil-A**: the Allergens table on https://www.chick-fil-a.com/nutrition-allergens (milk, egg, soy,
+  wheat, sesame, tree nuts, peanut, fish; no shellfish column, same as the item pages used before).
+- **Taco Bell**: the official allergen tool on https://www.tacobell.com/nutrition/allergen-info, which is
+  embedded from nutritionix.com/taco-bell/menu/special-diets/premium. Vegetarian = items marked "(V)"
+  (American Vegetarian Association certified) there, which also have `hasAVA` on their tacobell.com
+  product page. Taco Bell says it does not claim gluten-free for any item, so no gluten_free tags.
+  No item is marked vegan.
+- **Subway**: the October 2026 US allergen chart (link below) plus the October 2026 US nutrition guide
+  (https://media.subway.com/dam/urn:aaid:aem:f20a4541-8c88-496b-940d-4aa8318cae26/original/as/us-nutrition-en.pdf).
+  "May contain" (x), refined-oil-only (*) and the cookies' nut cross-contact (**) marks are not counted as
+  "contains".
 
-### Chick-fil-A (45)
+### Chick-fil-A (2 left)
 
-- [ ] Grilled Nuggets (8 ct)
-- [ ] Grilled Nuggets (12 ct)
-- [ ] Buttered Biscuit
-- [ ] Hash Brown
-- [ ] Waffle Potato Fries (Medium)
-- [ ] Waffle Potato Fries (Large)
-- [ ] Fruit Cup
-- [ ] Waffle Potato Chips
-- [ ] Frosted Coffee
-- [ ] Chick-fil-A Lemonade (Medium)
-- [ ] Chick-fil-A Diet Lemonade (Medium)
-- [ ] Sweetened Iced Tea (Medium)
-- [ ] Sweetened Iced Tea (Large)
-- [ ] Unsweetened Iced Tea
-- [ ] Sunjoy (Sweet Tea + Diet Lemonade, Medium)
-- [ ] Cold Brew Iced Coffee
-- [ ] DASANI Bottled Water
-- [ ] Chick-fil-A Sauce
-- [ ] Polynesian Sauce
-- [ ] Honey Mustard Sauce
-- [ ] Garden Herb Ranch Sauce
-- [ ] Barbeque Sauce
-- [ ] Zesty Buffalo Sauce
-- [ ] Honey Roasted BBQ Sauce
-- [ ] Chicken and Waffles Breakfast Sandwich
-- [ ] Hash Brown Scramble Bowl
-- [ ] Breakfast Waffle
-- [ ] English Muffin
-- [ ] Mini Yeast Rolls (4 ct)
-- [ ] Berry Parfait with Cookie Crumbs
-- [ ] Simply Orange Juice
-- [ ] 1% Chocolate Milk
-- [ ] Iced Coffee
-- [ ] Toasted Marshmallow Iced Coffee
-- [ ] Pineapple Dragonfruit Lemonade
-- [ ] Pineapple Dragonfruit Diet Lemonade
-- [ ] Pineapple Dragonfruit Iced Tea
-- [ ] Pineapple Dragonfruit Sunjoy
-- [ ] Pineapple Dragonfruit Sprite
-- [ ] S'mores Milkshake
-- [ ] S'mores Frosted Coffee
-- [ ] Float
-- [ ] Frosted Soda
-- [ ] Diet Frosted Lemonade
-- [ ] Pineapple Dragonfruit Frosted Lemonade
+- [ ] Iced Coffee: our row (200 cal / 7 g protein / 4 g fat) matches the "Iced Coffee" entry under Drinks,
+  which lists no allergens, but the "Iced Coffee" entries under Coffee list milk. Conflicting, so left
+  unverified. Check the item page or ask Chick-fil-A CARES.
+- [ ] Cold Brew Iced Coffee: 130 cal from the campus menu matches no entry in the national table (the
+  Cream Cold Brews are 370-530 cal and contain milk).
 
-### Panda Express (20)
+### Panda Express (20, none verified)
 
-- [ ] Chow Mein
-- [ ] Fried Rice
-- [ ] White Steamed Rice
-- [ ] Super Greens (as base)
-- [ ] The Original Orange Chicken
-- [ ] Grilled Teriyaki Chicken
-- [ ] Kung Pao Chicken
-- [ ] Beijing Beef
-- [ ] Broccoli Beef
-- [ ] Honey Walnut Shrimp
-- [ ] Super Greens (as entree)
-- [ ] Chicken Egg Roll
-- [ ] Cream Cheese Rangoon
-- [ ] Vegetable Spring Roll
-- [ ] Apple Pie Roll
-- [ ] Fortune Cookie
-- [ ] Sweet & Sour Sauce
-- [ ] Teriyaki Sauce
-- [ ] Chili Sauce
-- [ ] Soy Sauce
+- [ ] All 20 items. pandaexpress.com (/nutritioninformation, /-/media/... PDF paths) and the ordering API
+  (nomnom-prod-api.pandaexpress.com) answer HTTP 403 with a captcha page to scripts and headless browsers
+  (tried 2026-11-13). Only third-party copies of the PDF turned up in search, and those don't count. Open
+  https://www.pandaexpress.com/nutritioninformation in a normal browser, download the allergen PDF, and fill
+  each row from it.
 
-### Subway (58)
+### Subway (46 left)
 
-- [ ] Steak Philly
-- [ ] Chipotle Philly
-- [ ] Chicken & Bacon Ranch
-- [ ] Honey Mustard Chicken
-- [ ] Sweet Onion Chicken Teriyaki
-- [ ] Grilled Chicken
-- [ ] B.M.T.
-- [ ] Spicy Italian
-- [ ] 5 Meat Italian
-- [ ] Meatball Pepperoni
-- [ ] Meatball Marinara
-- [ ] Cold Cut Combo
-- [ ] B.L.T.
-- [ ] Oven-Roasted Turkey
-- [ ] Black Forest Ham
-- [ ] Roast Beef
-- [ ] Tuna
-- [ ] Veggie Delite
-- [ ] All American Club
-- [ ] Subway Club
-- [ ] Turkey & Ham
-- [ ] Pizza Sub
-- [ ] Veggie Patty
-- [ ] Ham & Salami
-- [ ] Spicy Pepperoni
-- [ ] Hot Honey Turkey Italian
-- [ ] Hot Honey Italian
-- [ ] Grilled Chicken & Avocado
-- [ ] Ham & Turkey Stacker
-- [ ] Turkey & Ranch Delite
-- [ ] Seasoned Steak & Avocado
-- [ ] 6-inch Bacon, Egg & Cheese
-- [ ] 6-inch Steak, Egg & Cheese
-- [ ] 6-inch Egg & Cheese
-- [ ] 6-inch Black Forest Ham, Egg & Cheese
-- [ ] Broccoli Cheddar Soup
-- [ ] Chicken Noodle Soup
-- [ ] Loaded Baked Potato Soup
-- [ ] Chocolate Chip Cookie
-- [ ] Double Chocolate Cookie
-- [ ] Oatmeal Raisin Cookie
-- [ ] Raspberry Cheesecake Cookie
-- [ ] White Chip Macadamia Nut Cookie
-- [ ] Steak Philly (Footlong)
-- [ ] Sweet Onion Chicken Teriyaki (Footlong)
-- [ ] Grilled Chicken (Footlong)
-- [ ] B.M.T. (Footlong)
-- [ ] Spicy Italian (Footlong)
-- [ ] 5 Meat Italian (Footlong)
-- [ ] Meatball Pepperoni (Footlong)
-- [ ] Cold Cut Combo (Footlong)
-- [ ] Oven-Roasted Turkey (Footlong)
-- [ ] Black Forest Ham (Footlong)
-- [ ] Roast Beef (Footlong)
-- [ ] Tuna (Footlong)
-- [ ] Veggie Delite (Footlong)
-- [ ] All American Club (Footlong)
-- [ ] Subway Club (Footlong)
+Verified: the 4 breakfast subs (the nutrition guide says "Values include 6" Artisan Italian, egg and
+American cheese"), the 3 soups and the 5 cookies.
 
-### Taco Bell (36)
+- [ ] The 6-inch and footlong subs (30 + 15) and the 4 Fresh Fit items. The nutrition guide says its values
+  are "based on standard recipes" but doesn't list the bread, cheese or sauce each sub uses, so the build
+  can't be taken from the nutrition source. Find each sub's default build on its subway.com menu page (in a
+  browser; subway.com timed out for scripts), then take the union of those ingredients' rows in the
+  allergen chart and write the build in `allergen_source`.
+- When verifying them, also set `contains_pork` (from the item name or the chart): B.L.T. (bacon), Chicken &
+  Bacon Ranch (bacon), Black Forest Ham and its footlong (ham), Meatball Pepperoni and its footlong
+  (pepperoni), Turkey & Ham (ham), Ham & Salami, Spicy Pepperoni, Ham & Turkey Stacker (ham), Spicy Italian
+  and its footlong ("Spicy Italian Meats (pepperoni, salami)" in the chart). B.M.T., Cold Cut Combo,
+  5 Meat Italian, Pizza Sub, All American Club, Subway Club and the Hot Honey subs need their meats checked.
 
-- [ ] Beefy 5-Layer Burrito
-- [ ] Burrito Supreme (Steak)
-- [ ] Cheesy Bean and Rice Burrito
-- [ ] Bean Burrito
-- [ ] Crunchwrap Supreme
-- [ ] Mexican Pizza
-- [ ] Cheese Quesadilla
-- [ ] Chicken Quesadilla
-- [ ] Steak Quesadilla
-- [ ] Chalupa Supreme (Chicken)
-- [ ] Crunchy Taco
-- [ ] Crunchy Taco Supreme
-- [ ] Soft Taco (Beef)
-- [ ] Soft Taco Supreme (Beef)
-- [ ] Nacho Cheese Doritos Locos Taco
-- [ ] Nacho Cheese Doritos Locos Taco Supreme
-- [ ] Spicy Potato Soft Taco
-- [ ] Nachos BellGrande
-- [ ] Chips & Nacho Cheese
-- [ ] Cheesy Roll Up
-- [ ] Cinnamon Twists
-- [ ] Creamy Jalapeño Sauce
-- [ ] Reduced-Fat Sour Cream
-- [ ] Diablo Sauce
-- [ ] Fire Sauce
-- [ ] Hot Sauce
-- [ ] Mild Sauce
-- [ ] Burrito Supreme (Beef)
-- [ ] Grilled Cheese Burrito
-- [ ] Chalupa Supreme (Beef)
-- [ ] Black Bean Chalupa Supreme
-- [ ] Cheesy Gordita Crunch
-- [ ] Black Bean Crunchwrap Supreme
-- [ ] Veggie Mexican Pizza
-- [ ] Chips & Guacamole
-- [ ] Side of Nacho Cheese
+### Taco Bell (4 left)
+
+- [ ] Creamy Jalapeño Sauce, Reduced-Fat Sour Cream, Chips & Guacamole, Side of Nacho Cheese: not listed on
+  their own in the tacobell.com allergen tool. When Chips & Guacamole is verified, also tag it vegetarian
+  (its tacobell.com product page has `hasAVA`).
