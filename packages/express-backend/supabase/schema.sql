@@ -173,6 +173,11 @@ alter table public.meals add column if not exists serving_windows jsonb;
 alter table public.meals add column if not exists meal_role text
   check (meal_role in ('main', 'side', 'drink', 'dessert', 'sauce'));
 
+-- ============ Free with a meal (Sprint 4, see migrations/20261113000000_meal_free_with_meal.sql) ============
+-- true for sauces, fortune cookies etc. that come free with a meal: no standalone price, shown as
+-- "Free with a meal", never recommended on their own.
+alter table public.meals add column if not exists free_with_meal boolean not null default false;
+
 -- ============ Menu offerings: where the price came from ============
 alter table public.menu_offerings add column if not exists price_source text;
 

@@ -7,7 +7,9 @@ import {
   defaultLogLocation,
   logLocations,
   mealLogFromItem,
+  priceText,
   submitMealLog,
+  unpricedLogNote,
 } from "./mealLog";
 
 // Mock data only.
@@ -171,5 +173,21 @@ describe("submitMealLog", () => {
       throw new Error("Can't reach the PolyProvision server. Try again.");
     });
     assert.equal(failure, "Can't reach the PolyProvision server. Try again.");
+  });
+});
+
+describe("priceText / unpricedLogNote", () => {
+  it("shows the price, Free with a meal, or Price unavailable (never $0.00 for unknown)", () => {
+    assert.equal(priceText({}, 8.5), "$8.50");
+    assert.equal(priceText({ free_with_meal: true }, null), "Free with a meal");
+    assert.equal(priceText({ free_with_meal: false }, null), "Price unavailable");
+    assert.equal(priceText({}, undefined), "Price unavailable");
+    // A real price always wins, even on a free-with-meal item.
+    assert.equal(priceText({ free_with_meal: true }, 0.5), "$0.50");
+  });
+
+  it("explains why an unpriced log doesn't count toward spending", () => {
+    assert.equal(unpricedLogNote({ free_with_meal: true }), "Free with a meal, not counted toward spending");
+    assert.equal(unpricedLogNote({}), "Price unavailable, not counted toward spending");
   });
 });

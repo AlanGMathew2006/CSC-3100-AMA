@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "import:menu": "tsx --env-file=.env scripts/import-menu.ts",
+    "apply:fill-in": "tsx scripts/apply-fill-in.ts",
     "pretest": "npm run build --prefix ../shared",
     "test": "tsx --test scripts/**/*.test.ts services/**/*.test.ts"
   },

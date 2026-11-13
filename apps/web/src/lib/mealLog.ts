@@ -68,6 +68,19 @@ export function mealLogFromItem(item: MenuItem, locationId?: string): MealLogInp
 }
 
 export const UNPRICED_LOG_NOTE = "Price unavailable, not counted toward spending";
+export const FREE_WITH_MEAL = "Free with a meal";
+export const FREE_WITH_MEAL_LOG_NOTE = "Free with a meal, not counted toward spending";
+
+// What to show where a price would go: the price, "Free with a meal" for sauces etc. that come
+// with a meal (data/menu_items.csv free_with_meal), or "Price unavailable".
+export function priceText(item: Pick<MenuItem, "free_with_meal">, price: number | null | undefined): string {
+  if (price != null) return `$${price.toFixed(2)}`;
+  return item.free_with_meal ? FREE_WITH_MEAL : "Price unavailable";
+}
+
+// The note under Add to Today (and in the toast) when the item is logged without a price.
+export const unpricedLogNote = (item: Pick<MenuItem, "free_with_meal">) =>
+  item.free_with_meal ? FREE_WITH_MEAL_LOG_NOTE : UNPRICED_LOG_NOTE;
 
 export interface ComboPick {
   item: MenuItem;

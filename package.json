@@ -11,7 +11,8 @@
     "dev": "concurrently -k -n web,api \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=packages/express-backend\"",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
     "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "apply:fill-in": "npm run apply:fill-in --workspace=packages/express-backend --"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
