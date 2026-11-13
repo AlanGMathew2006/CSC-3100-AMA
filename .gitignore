@@ -16,6 +16,8 @@ apps/web/vite.config.js
 apps/web/vite.config.d.ts
 /skills-lock.json
 .claude/settings.local.json
+apps/web/test-results/
+apps/web/playwright-report/
 
 # Terraform files
 .terraform/

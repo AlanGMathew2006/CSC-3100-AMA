@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { MIN_PASSWORD_LENGTH, validateNewPassword, validateSignup } from "./validation";
 
 const good = "a".repeat(MIN_PASSWORD_LENGTH);

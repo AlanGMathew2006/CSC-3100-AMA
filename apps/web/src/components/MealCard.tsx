@@ -1,4 +1,5 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import { formatAmount } from "../lib/format";
 import { listedLocation } from "../lib/locations";
 import { priceText } from "../lib/mealLog";
 import { servingLabel, servingStatusText } from "../lib/serving";
@@ -82,11 +83,11 @@ export function MealCard({
         <span className="meal-meta meal-card-meta">
           <span>
             <img src="/assets/figma/flame.svg" alt="" aria-hidden="true" />
-            {item.calories == null ? "— kcal" : `${item.calories} cal`}
+            {item.calories == null ? "cal unavailable" : `${formatAmount(item.calories)} cal`}
           </span>
           <span>
             <img src="/assets/figma/protein.svg" alt="" aria-hidden="true" />
-            {item.protein_g == null ? "—" : `${item.protein_g}g`} protein
+            {item.protein_g == null ? "protein unavailable" : `${formatAmount(item.protein_g, "g")} protein`}
           </span>
         </span>
       </button>

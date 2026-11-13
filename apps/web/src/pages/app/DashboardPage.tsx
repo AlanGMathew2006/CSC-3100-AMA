@@ -12,9 +12,11 @@ import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
 import {
+  NO_RECOMMENDATION_ACTIONS,
   NO_RECOMMENDATION_MESSAGES,
   recommendationAsMenuItem,
   recommendationLog,
+  recommendationParts,
 } from "../../lib/recommendations";
 import type { UserPreferences } from "../../types/dashboard";
 import { NutritionSheet } from "./NutritionSheet";
@@ -92,20 +94,25 @@ export function DashboardPage({
 
   // Ranked by the optimizer (GET /api/recommendations); each is shown through the existing MealCard.
   // `item` is the whole recommendation for display. A single-item recommendation opens and saves
-  // that meal; a multi-item one opens the recommendation view and has no bookmark.
+  // that meal; a multi-item one opens the recommendation view and has no bookmark. They show even
+  // if the menu hasn't loaded; then `meal` is missing and the card opens the recommendation view.
   const recommendations = useMemo(
     () =>
       (recs.data?.recommendations ?? []).flatMap((rec) => {
         const items = menu.menu?.items ?? [];
         const item = recommendationAsMenuItem(rec, items);
-        const meal = item && items.find((candidate) => candidate.id === item.id);
+        const meal = item ? items.find((candidate) => candidate.id === item.id) : undefined;
         const single = !rec.combo && rec.items.length === 1;
-        return item && meal ? [{ rec, item, meal, single }] : [];
+        // The card title is shortened to 2 items; list them all when some are hidden.
+        const parts = recommendationParts(rec);
+        const includes = parts.length > 2 ? `Includes: ${parts.join(" + ")}` : null;
+        return item ? [{ rec, item, meal, single: single && Boolean(meal), includes }] : [];
       }),
     [recs.data, menu.menu],
   );
+  const emptyReason = recs.loading ? null : recs.data?.reason ?? null;
   const openRecommendation = ({ rec, meal, single }: (typeof recommendations)[number]) =>
-    single ? onSelectMeal(meal) : onSelectRecommendation(rec);
+    single && meal ? onSelectMeal(meal) : onSelectRecommendation(rec);
   const weeklyDays = useMemo(() => {
     const today = new Date();
     const mondayOffset = (today.getDay() + 6) % 7;
@@ -260,7 +267,9 @@ export function DashboardPage({
                 {macro.label}
               </span>
               <strong className="summary-value">
-                {Math.round(macro.eaten ?? 0)} / {macro.goal ?? "—"}g
+                {macro.goal == null
+                  ? `${Math.round(macro.eaten ?? 0)}g · no goal`
+                  : `${Math.round(macro.eaten ?? 0)} / ${macro.goal}g`}
               </strong>
               <span className="summary-progress">
                 <i style={{ width: `${macro.goal ? Math.min(((macro.eaten ?? 0) / macro.goal) * 100, 100) : 0}%` }} />
@@ -303,11 +312,20 @@ export function DashboardPage({
           )}
         </section>
 
-        {(recs.loading || menu.loading) && recommendations.length === 0 && (
+        {recs.loading && recommendations.length === 0 && (
           <p className="field-helper success" role="status">Loading meal recommendations…</p>
         )}
-        {!recs.loading && recs.data?.reason && (
-          <p className="empty-card">{NO_RECOMMENDATION_MESSAGES[recs.data.reason]}</p>
+        {emptyReason && (
+          <div className="empty-card">
+            <p>{NO_RECOMMENDATION_MESSAGES[emptyReason]}</p>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => onNavigate(NO_RECOMMENDATION_ACTIONS[emptyReason][1])}
+            >
+              {NO_RECOMMENDATION_ACTIONS[emptyReason][0]}
+            </button>
+          </div>
         )}
         {recommendations[0] && (
           <>
@@ -318,8 +336,11 @@ export function DashboardPage({
                 saved={saved.isSaved(recommendations[0].item.id)}
                 hideBookmark={!recommendations[0].single}
                 onSelect={() => openRecommendation(recommendations[0])}
-                onToggleSaved={() => void toggleSaved(recommendations[0].meal)}
+                onToggleSaved={() => void toggleSaved(recommendations[0].item)}
               />
+              {recommendations[0].includes && (
+                <p className="recommend-explanation">{recommendations[0].includes}</p>
+              )}
               <p className="recommend-explanation">{recommendations[0].rec.explanation}</p>
               <MacroMatchSummary match={recommendations[0].rec.macro_match} />
               <div className="meal-actions">
@@ -347,8 +368,9 @@ export function DashboardPage({
                     saved={saved.isSaved(entry.item.id)}
                     hideBookmark={!entry.single}
                     onSelect={() => openRecommendation(entry)}
-                    onToggleSaved={() => void toggleSaved(entry.meal)}
+                    onToggleSaved={() => void toggleSaved(entry.item)}
                   />
+                  {entry.includes && <p className="recommend-explanation">{entry.includes}</p>}
                   <p className="recommend-explanation">
                     {macroScoreText(entry.rec.macro_match.score)} · {entry.rec.explanation}
                   </p>

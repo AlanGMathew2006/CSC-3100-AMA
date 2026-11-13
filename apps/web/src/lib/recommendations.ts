@@ -6,12 +6,18 @@ import {
 } from "@csc-3100-ama/shared";
 import type { MealLogInput } from "../types/dashboard";
 
+// "2× Broccoli Beef", "½ Fried Rice" (half of a half-and-half base), "Chow Mein".
+export const quantityLabel = (quantity: number, name: string) =>
+  quantity === 0.5 ? `½ ${name}` : quantity > 1 ? `${quantity}× ${name}` : name;
+
+// Every item of a recommendation, in the optimizer's order (main first).
+export const recommendationParts = (rec: Recommendation): string[] =>
+  rec.items.map((item) => quantityLabel(item.quantity, item.name));
+
 // Items arrive main first from the optimizer. "Plate: 2× Broccoli Beef + Fried Rice", or with
 // `maxItems`, "Bigger Plate: Broccoli Beef + Orange Chicken +2 more" so card titles stay short.
 export function recommendationLabel(rec: Recommendation, maxItems = Infinity): string {
-  const names = rec.items.map((item) =>
-    item.quantity > 1 ? `${item.quantity}× ${item.name}` : item.name,
-  );
+  const names = recommendationParts(rec);
   const shown = names.slice(0, maxItems).join(" + ");
   const hidden = names.length - Math.min(names.length, maxItems);
   const parts = hidden > 0 ? `${shown} +${hidden} more` : shown;
@@ -59,14 +65,29 @@ export function combinedAllergens(
 }
 
 // MealCard shows one MenuItem; this wraps a whole recommendation in one. It keeps the first
-// item's real id so saving and opening details still point at an actual meal.
+// item's real id so saving and opening details still point at an actual meal. When the menu
+// hasn't loaded (or failed), the card is built from the recommendation alone, so it still shows.
 export function recommendationAsMenuItem(
   rec: Recommendation,
   menuItems: MenuItem[],
 ): MenuItem | null {
   const first = rec.items[0];
-  const meal = first && menuItems.find((item) => item.id === first.meal_id);
-  if (!meal) return null;
+  if (!first) return null;
+  const meal: MenuItem = menuItems.find((item) => item.id === first.meal_id) ?? {
+    id: first.meal_id,
+    name: first.name,
+    restaurant: rec.location.name,
+    category: "",
+    serving: null,
+    calories: null,
+    protein_g: null,
+    carbs_g: null,
+    fat_g: null,
+    meal_component: null,
+    allergens_verified: false,
+    meal_role: first.meal_role,
+    offerings: [],
+  };
   return {
     ...meal,
     name: recommendationLabel(rec, 2),
@@ -88,6 +109,13 @@ export function recommendationAsMenuItem(
     ],
   };
 }
+
+// What the user can do next when there are no recommendations: [button label, tab to open].
+export const NO_RECOMMENDATION_ACTIONS: Record<RecommendationsReason, [string, "profile" | "explore"]> = {
+  over_daily_budget: ["Browse all meals", "explore"],
+  no_eligible_locations: ["Browse all meals", "explore"],
+  no_feasible_meals: ["Adjust your filters", "profile"],
+};
 
 export const NO_RECOMMENDATION_MESSAGES: Record<RecommendationsReason, string> = {
   over_daily_budget:

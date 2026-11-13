@@ -113,7 +113,7 @@ Sources used (2026-11-13):
 Verified: the 4 breakfast subs (the nutrition guide says "Values include 6" Artisan Italian, egg and
 American cheese"), the 3 soups and the 5 cookies.
 
-- [ ] The 6-inch and footlong subs (30 + 15) and the 4 Fresh Fit items. The nutrition guide says its values
+- [ ] The 27 six-inch and 15 footlong subs and the 4 Fresh Fit items. The nutrition guide says its values
   are "based on standard recipes" but doesn't list the bread, cheese or sauce each sub uses, so the build
   can't be taken from the nutrition source. Find each sub's default build on its subway.com menu page (in a
   browser; subway.com timed out for scripts), then take the union of those ingredients' rows in the

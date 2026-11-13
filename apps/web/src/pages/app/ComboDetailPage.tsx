@@ -14,6 +14,7 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { OpenBadge } from "../../components/MealCard";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
+import { formatAmount } from "../../lib/format";
 import { comboLog, type ComboPick } from "../../lib/mealLog";
 import { servingLabel, servingStatusText } from "../../lib/serving";
 
@@ -128,7 +129,6 @@ export function ComboDetailPage({
       <BrandHeader />
       <main className="app-content detail-content">
         {menuError && <p className="field-helper error" role="alert">{menuError}</p>}
-        {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
         <div className="detail-heading">
           <button type="button" className="back-button" onClick={onBack}>
             <img src="/assets/figma/back.svg" alt="" />
@@ -237,7 +237,7 @@ export function ComboDetailPage({
                 ] as const
               ).map(([label, amount, unit]) => (
                 <div className="detail-nutrition" key={label}>
-                  <strong>{amount != null ? `${amount}${unit}` : totals ? "unavailable" : "—"}</strong>
+                  <strong>{totals ? formatAmount(amount, unit) : "—"}</strong>
                   <span>{label}</span>
                 </div>
               ))}
@@ -258,6 +258,7 @@ export function ComboDetailPage({
               {log.logging ? "Adding…" : "Add to Today"}
             </button>
           </div>
+          {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
         </div>
       </main>
       <BottomNav active="explore" onNavigate={onNavigate} />

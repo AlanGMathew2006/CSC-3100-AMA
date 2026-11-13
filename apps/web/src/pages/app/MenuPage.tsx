@@ -26,7 +26,7 @@ export function MenuPage({
 }) {
   const { menu, loading, error, reload } = useMenu();
   const saved = useSavedMeals();
-  const log = useLogMeal();
+  const log = useLogMeal({ onError: (message) => onToast(`Couldn't add to today: ${message}`) });
   const mealTargets = useMealTargets();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("Location");
