@@ -63,6 +63,9 @@ export interface MenuItem {
   allergens_verified?: boolean;
   serving_windows?: ServingWindows;
   meal_role?: MealRole | null;
+  // Sauces, fortune cookies etc. that come free with a meal (data/menu_items.csv free_with_meal).
+  // They have no standalone price and are never recommended on their own.
+  free_with_meal?: boolean;
   // Latest price at each location; empty when the item has no standalone price (combo only).
   offerings: MenuOffering[];
   // Only for items with no offerings: the restaurant's locations, best availability first,

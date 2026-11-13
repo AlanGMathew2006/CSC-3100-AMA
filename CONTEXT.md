@@ -165,7 +165,9 @@ Implemented in packages/express-backend/services/recommendation-service.ts
    is built around a main dish (meal roles from data/meal_roles.json):
    1-2 mains, where any combo counts as one, and at most one combo of
    any kind; at most one side and one drink, and a Chick-fil-A meal's
-   side and drink slots use those up; never desserts or sauces. Up to
+   side and drink slots use those up; never desserts or sauces, and
+   never items marked free_with_meal (sauces, fortune cookies; they
+   show "Free with a meal" instead of a price). Up to
    2 of the same main, 1 of anything else, at most 4 items (a combo
    counts as one), and never over the budget.
    It minimizes how far the meal lands from each target (going under

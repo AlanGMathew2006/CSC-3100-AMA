@@ -6,7 +6,7 @@ import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMealTargets } from "../../hooks/useRecommendations";
-import { logLocations, mealLogFromItem, UNPRICED_LOG_NOTE } from "../../lib/mealLog";
+import { logLocations, mealLogFromItem, unpricedLogNote } from "../../lib/mealLog";
 import { servingLabel, servingStatusText } from "../../lib/serving";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
@@ -133,7 +133,7 @@ export function MenuPage({
     }
     const location = locations[0];
     if (await log.addMeal(mealLogFromItem(item, location?.location_id))) {
-      onToast(location?.price == null ? `Added to today. ${UNPRICED_LOG_NOTE}.` : "Added to today");
+      onToast(location?.price == null ? `Added to today. ${unpricedLogNote(item)}.` : "Added to today");
     }
   }
 

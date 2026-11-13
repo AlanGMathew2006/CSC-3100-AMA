@@ -7,124 +7,62 @@ from `packages/express-backend` (re-running is safe, it upserts), then tick the 
 Dining hours: done (`data/dining_hours.json`, regular-week hours collected 2026-10-30).
 Re-check them at the start of each quarter and before breaks.
 
-## Item serving windows (`data/serving_windows.json`)
+## Prices, serving windows and combo contents: `data/manual_fill_in.csv`
 
-- [ ] Subway breakfast cutoff (PCV and Kennedy Library). The cutoff varies by franchise and neither
-  campus Subway lists one, so the 4 Subway "Breakfast" items have `"windows": "unknown"`. Explore
-  shows "Serving time unknown" and they are never recommended. Ask each store or check the Grubhub
-  campus app, then replace "unknown" in the Subway meal rule with the per-day windows (e.g. every day
-  `{"open": "00:00", "close": "10:30"}`), a source, and a `verified` note. If the two stores differ,
-  add overrides by `source_id`. Note that the import file matches meals by restaurant, not location.
-- [ ] Confirm the Chick-fil-A breakfast cutoff at the campus store. 10:30 is the chain-wide time from
-  chick-fil-a.com; the Cal Poly menu lists no breakfast times.
-- [ ] Check Chick-fil-A "Mini Yeast Rolls (4 ct)". It is in the Breakfast category so it gets the
-  breakfast window, but it may be sold all day. If so, add an override with `"windows": null`.
+Everything below needs the Grubhub campus app (login required) or the store itself, so it is collected
+in one sheet: **`data/manual_fill_in.csv`**, one row per missing value (97 rows on 2026-11-13: 36 prices,
+3 serving windows, 58 combo-contents rows). Then:
 
-## Combo contents (`data/combo_contents.json`)
+1. Open the Grubhub campus app and go down the sheet. For each row, type the answer in `value` and where
+   it came from in `source` (e.g. `Grubhub campus app, 2026-11-20`). Leave rows you can't answer blank.
+2. From the repo root: `npm run apply:fill-in -- --dry-run` (checks everything, writes nothing), then
+   `npm run apply:fill-in`. It validates every filled row, merges them into `menu_items.csv`,
+   `serving_windows.json` and `combo_contents.json`, runs the import's own checks on the result, and
+   removes the applied rows from the sheet. If anything is wrong it writes nothing and says which row.
+3. From `packages/express-backend`: `npm run import:menu -- --dry-run`, then `npm run import:menu`.
 
-Each fixed-content combo has an entry keyed by its source_id. Only entries with `"verified": true`
-are recommended or show nutrition in Explore; the rest show "Contents unverified" and can only be
-logged without nutrition. After fixing an entry, set `"verified": true`, update `"source"`, re-run
-`npm run import:menu -- --dry-run` (it checks every id) and then `npm run import:menu`.
+What goes in `value`, by the `missing` column:
 
-- [ ] **Panda #4 Plate: second entree.** menu_combos.csv lists "Fried Rice + Chow Mein, Orange
-  Chicken (as listed)" for a 2-entree plate. Check the Grubhub campus app and add the second entree.
-- [ ] **Taco Bell combos (all 10): exact contents.** The CSV only says "Includes a drink; see Grubhub
-  item details for exact contents". For each combo, check in the Grubhub campus app: which food
-  items and how many (e.g. which 3 tacos, beef or chicken), and which drink is included and its
-  size. There are no Taco Bell drinks in menu_items.csv yet, so add those rows (with official
-  nutrition) first. Combos: 3 Crunchy Taco Combo, 3 Crunchy Taco Supreme Combo, Chicken Quesadilla
-  Combo, 3 Soft Taco Combo, 3 Soft Taco Supreme Combo, 3 Doritos Locos Tacos Combo, 3 Doritos Locos
-  Tacos Supreme Combo, Crunchwrap Supreme Combo, Burrito Supreme Combo, 2 Chicken Chalupas Supreme
-  Combo.
-- [ ] **Chick-fil-A Nuggets Meal and Grilled Nuggets Meal: nugget count.** The meal names don't give a
-  size, so the 8 ct rows are used as placeholders (Grubhub lists one price for the item, assumed to
-  be the 8 ct). Confirm the count in Grubhub.
-- [ ] **Chick-fil-A Chicken and Waffles Sandwich Meal (lunch): entree.** menu_items.csv only has the
-  breakfast Chicken and Waffles Sandwich, which Grubhub prices differently ($10.35 for the lunch
-  version), so there is no matching lunch entree row. Add one (price + official nutrition), then
-  reference it.
-- [ ] **Chick-fil-A breakfast meals (13): side and drink.** Waffle Potato Fries may not be offered
-  at breakfast, so these use Hash Brown and Sweetened Iced Tea (Medium) as placeholders and stay
-  unverified. Check in Grubhub which side and drink (and size) a breakfast meal includes.
-- [ ] **CFA meal side/drink substitutions.** Lunch meals list only the defaults (side: Waffle Potato
-  Fries (Medium), drink: Sweetened Iced Tea (Medium)). Check in Grubhub which other sides and drinks
-  can be chosen at no extra charge (and their sizes) and add them to each slot's `choices`.
+| missing | value | example |
+|---|---|---|
+| `price` | price with two decimals, more than 0; or `none` if it isn't sold on its own | `9.15` |
+| `serving_window` | `HH:MM-HH:MM` every day (combined with the store's hours), or `all day` | `00:00-10:30` |
+| `combo_contents` | parts separated by `;`, each `<id> x<count>`, plus `drink=<id>` / `side=<id>` | `taco-bell--crunchy-taco x3; drink=<drink id>` |
+| `combo_entree` | the meal's entree (one `menu_items.csv` id) | `chick-fil-a--chick-fil-a-nuggets-8-ct` |
+| `combo_part` | a part to add, `<id>` or `<id> x<count>` | `panda-express--beijing-beef` |
+| `combo_side` / `combo_drink` | the side/drink the meal includes; several with `\|`, default first | `chick-fil-a--hash-brown` |
+| `combo_side_choices` / `combo_drink_choices` | every side/drink you can pick at no extra charge, default first | `chick-fil-a--waffle-potato-fries-medium\|chick-fil-a--fruit-cup` |
 
-## Missing prices (`price_usd` in `data/menu_items.csv`)
+A combo is marked verified (and can be recommended) once all of its `combo_contents`, `combo_entree`,
+`combo_part`, `combo_side` and `combo_drink` rows are filled. The `_choices` rows only add options.
 
-47 items have no `price_usd`. They import as meals with no offering, so the app shows
-"Price unavailable" and the optimizer skips them (except Panda combo parts, below).
+Before filling some rows, add a row to `menu_items.csv` first (with official nutrition), then use its id:
 
-- **Combo-only**: sold only inside a Panda Bowl/Plate/Bigger Plate. These should stay blank;
-  `menu_combos.csv` already has the combo prices.
-- **Look up in Grubhub**: check the Cal Poly Grubhub campus app and fill in `price_usd` and
-  `price_source`. If an item isn't sold on its own (e.g. a free sauce), leave it blank and add a note.
+- **Taco Bell combos (10)**: there are no Taco Bell drink rows yet.
+- **Chick-fil-A Chicken and Waffles Sandwich Meal (lunch)**: there is no lunch Chicken and Waffles Sandwich
+  row yet (Grubhub prices it at $10.35, differently from the breakfast one).
 
-### Chick-fil-A (15)
+What was checked without logging in (2026-11-13), so it is in the sheet:
 
-Look up in Grubhub:
+- Grubhub: public grubhub.com pages only return the app shell; campus menus need the logged-in app.
+- Subway breakfast cutoff: not in the nutrition guide or allergen chart; subway.com store pages time out
+  for scripts.
+- Chick-fil-A breakfast cutoff: the campus store's page (chick-fil-a.com/californiapolytechnicstate)
+  lists "Breakfast" and store hours but no cutoff. 10:30 stays as the chain-wide default until confirmed.
+- Mini Yeast Rolls (4 ct): no official page says whether it is sold all day.
 
-- [ ] Chick-fil-A Nuggets (12 ct) (note: Not priced on Grubhub.)
-- [ ] Grilled Nuggets (12 ct) (note: Not priced on Grubhub.)
-- [ ] Chicken, Egg & Cheese Biscuit (note: Not priced on Grubhub.)
-- [ ] Waffle Potato Fries (Large) (note: Not priced on Grubhub.)
-- [ ] Mac & Cheese (Small) (note: Not priced on Grubhub.)
-- [ ] Mac & Cheese (Large) (note: Not priced on Grubhub. Large size not in the national nutrition guide; calories from campus menu.)
-- [ ] Sweetened Iced Tea (Large) (note: Not priced on Grubhub.)
-- [ ] Cold Brew Iced Coffee (note: Not priced on Grubhub. Not in the national nutrition guide; calories from campus menu.)
-- [ ] Chick-fil-A Sauce (note: Free with entrees.)
-- [ ] Polynesian Sauce (note: Free with entrees.)
-- [ ] Honey Mustard Sauce (note: Free with entrees.)
-- [ ] Garden Herb Ranch Sauce (note: Free with entrees.)
-- [ ] Barbeque Sauce (note: Free with entrees.)
-- [ ] Zesty Buffalo Sauce (note: Free with entrees.)
-- [ ] Honey Roasted BBQ Sauce (note: Free with entrees.)
+### Free with a meal
 
-### Panda Express (17)
+Sauces and the Panda fortune cookie are marked `free_with_meal=yes` in `menu_items.csv` (12 items, all
+with a note saying "Free with entrees." or "Usually free with a meal."). They keep a blank price (never
+$0), Explore and meal details say "Free with a meal" instead of "Price unavailable", logging one doesn't
+count toward spending, and the recommender never picks them on their own. Their price rows in the sheet
+are optional: put `none` if Grubhub doesn't sell them separately.
 
-Combo-only (leave blank):
+### Combo-only Panda items (11, no action)
 
-- [x] Chow Mein (base)
-- [x] Fried Rice (base)
-- [x] White Steamed Rice (base)
-- [x] Super Greens (as base) (base)
-- [x] The Original Orange Chicken (entree)
-- [x] Grilled Teriyaki Chicken (entree)
-- [x] Kung Pao Chicken (entree)
-- [x] Beijing Beef (entree)
-- [x] Broccoli Beef (entree)
-- [x] Honey Walnut Shrimp (entree)
-- [x] Super Greens (as entree) (entree)
-
-Look up in Grubhub:
-
-- [ ] Apple Pie Roll (note: Not in Panda's published nutrition guide; calories from campus menu.)
-- [ ] Fortune Cookie (note: Usually free with a meal.)
-- [ ] Sweet & Sour Sauce (note: Usually free with a meal.)
-- [ ] Teriyaki Sauce (note: Usually free with a meal.)
-- [ ] Chili Sauce (note: Usually free with a meal.)
-- [ ] Soy Sauce (note: Usually free with a meal.)
-
-### Taco Bell (15)
-
-Look up in Grubhub:
-
-- [ ] Burrito Supreme (Steak) (note: Campus menu lists steak version, 390 cal; macros from TB calculator with steak swapped for beef)
-- [ ] Cheese Quesadilla
-- [ ] Chicken Quesadilla
-- [ ] Steak Quesadilla
-- [ ] Chalupa Supreme (Chicken) (note: Campus menu lists chicken version, 350 cal; macros from TB calculator with grilled chicken)
-- [ ] Spicy Potato Soft Taco
-- [ ] Nachos BellGrande
-- [ ] Cheesy Roll Up
-- [ ] Cinnamon Twists
-- [ ] Creamy Jalapeño Sauce (note: Campus serves 1 packet (70 cal); official values are for a 1.5 oz cup. Protein listed as <1 g)
-- [ ] Reduced-Fat Sour Cream (note: Campus packet lists 30 cal. Protein listed as <1 g)
-- [ ] Diablo Sauce (note: Calories from campus menu)
-- [ ] Fire Sauce (note: Calories from campus menu)
-- [ ] Hot Sauce (note: Calories from campus menu)
-- [ ] Mild Sauce (note: Calories from campus menu)
+Chow Mein, Fried Rice, White Steamed Rice, Super Greens (base and entree) and the 6 entrees are only sold
+inside a Bowl/Plate/Bigger Plate, so they stay without a standalone price.
 
 ## Allergens and dietary tags (`allergens`, `tags`, `allergens_verified`, `allergen_source`)
 

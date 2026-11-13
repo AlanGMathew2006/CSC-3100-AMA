@@ -764,11 +764,12 @@ export async function recommend(
         (o) => o.location_id === location.id
       );
       const nutrition = fullNutrition(item);
-      // Desserts, sauces, and items without a role are never recommended.
+      // Desserts, sauces, items without a role, and free-with-a-meal extras (even if a price is
+      // added later) are never recommended on their own.
       const role = (RECOMMENDABLE_ROLES as readonly string[]).includes(item.meal_role ?? "")
         ? (item.meal_role as RecommendableRole)
         : null;
-      return offering && nutrition && role && !item.meal_component
+      return offering && nutrition && role && !item.meal_component && !item.free_with_meal
         ? [{ id: item.id, name: item.name, price: Number(offering.price), nutrition, role }]
         : [];
     });

@@ -1,5 +1,6 @@
 import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
 import { listedLocation } from "../lib/locations";
+import { priceText } from "../lib/mealLog";
 import { servingLabel, servingStatusText } from "../lib/serving";
 import { macroScoreText } from "./MacroMatch";
 
@@ -76,7 +77,7 @@ export function MealCard({
           <strong>{item.name}</strong>
         </span>
         <span className="meal-card-price">
-          {price == null ? "Price unavailable" : `$${price.toFixed(2)}`}
+          {priceText(item, price)}
         </span>
         <span className="meal-meta meal-card-meta">
           <span>

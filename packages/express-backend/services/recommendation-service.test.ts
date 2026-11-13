@@ -481,6 +481,25 @@ test("desserts and a drink that fit the macros better than any main are still no
   assert.ok(rec.items.every((i) => i.meal_id !== "cfa-shake" && i.meal_id !== "cfa-cookie" && i.meal_id !== "cfa-sauce"));
 });
 
+test("a free-with-a-meal item is never recommended on its own, even with a price and a perfect fit", async () => {
+  // Targets for 2 meals left: 750 / 40 / 95 / 25. The sandwich + "free" side hit them almost exactly.
+  const freeSide: MenuItem = {
+    ...item("cfa-free-side", "Chick-fil-A", [310, 12, 54, 8], { price: 0.25, locationId: "loc-sub", role: "side" }),
+    free_with_meal: true
+  };
+  const sandwich = item("cfa-sandwich", "Chick-fil-A", [440, 28, 41, 17], { price: 6.49, locationId: "loc-sub" });
+  const menu = { items: [sandwich, freeSide], combos: [] };
+  const result = await recommend(data({ menu }), { at: NOON_WED, locationId: "loc-sub" });
+  assert.ok(result.recommendations.length > 0);
+  assert.ok(result.recommendations.every((rec) => rec.items.every((i) => i.meal_id !== "cfa-free-side")));
+  const control = await recommend(
+    data({ menu: { ...menu, items: [sandwich, { ...freeSide, free_with_meal: false }] } }),
+    { at: NOON_WED, locationId: "loc-sub" }
+  );
+  // Without the flag the same item would be picked, so the flag is what keeps it out.
+  assert.ok(control.recommendations[0]?.items.some((i) => i.meal_id === "cfa-free-side"));
+});
+
 test("every recommendation has a main or a combo and respects the role limits", async () => {
   for (const prefs of [{}, { nutrition_priorities: ["High protein"] }, { nutrition_priorities: ["Lower calorie"] }, { allergens: ["milk"] }]) {
     for (const spent of [0, 12, 18]) {

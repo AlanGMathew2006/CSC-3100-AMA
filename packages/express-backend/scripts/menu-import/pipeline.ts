@@ -29,6 +29,21 @@ export type CsvRow = Record<string, string>;
 
 // Minimal RFC 4180 CSV parser: quoted fields, escaped quotes (""), commas and newlines inside quotes.
 export function parseCsv(text: string): CsvRow[] {
+  const [header, ...body] = parseCsvTable(text);
+  if (!header) return [];
+  const keys = header.map((h) =>
+    h.replace(/^\uFEFF/, "").trim()
+  );
+  return body.map((cells) =>
+    Object.fromEntries(
+      keys.map((key, i) => [key, (cells[i] ?? "").trim()])
+    )
+  );
+}
+
+// The raw cells of every non-empty line (header first), untrimmed, so a file can be written back
+// unchanged (see toCsv in ../fill-in/fill-in.ts).
+export function parseCsvTable(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let field = "";
@@ -67,18 +82,8 @@ export function parseCsv(text: string): CsvRow[] {
     rows.push(row);
   }
 
-  const nonEmpty = rows.filter((r) =>
+  return rows.filter((r) =>
     r.some((cell) => cell.trim() !== "")
-  );
-  const [header, ...body] = nonEmpty;
-  if (!header) return [];
-  const keys = header.map((h) =>
-    h.replace(/^\uFEFF/, "").trim()
-  );
-  return body.map((cells) =>
-    Object.fromEntries(
-      keys.map((key, i) => [key, (cells[i] ?? "").trim()])
-    )
   );
 }
 
@@ -105,6 +110,7 @@ export interface ItemRecord {
   tags: string[];
   allergensVerified: boolean;
   allergenSource: string | null;
+  freeWithMeal: boolean;
 }
 
 export interface ComboRecord {
@@ -243,6 +249,16 @@ export function toItemRecords(rows: CsvRow[]): {
       return fail("allergen_source is required when allergens_verified is yes");
     if (!allergensVerified && (allergens.values.length || tags.values.length))
       return fail("allergens/tags are set but allergens_verified is not yes");
+    // "yes" for sauces etc. that come free with a meal. Never $0 (no official source says that):
+    // blank price, or a real price if one is sold on its own. The note must say where "free" comes from.
+    const freeFlag = text(row.free_with_meal)?.toLowerCase() ?? "no";
+    if (freeFlag !== "yes" && freeFlag !== "no")
+      return fail("free_with_meal must be yes or no");
+    const freeWithMeal = freeFlag === "yes";
+    if (freeWithMeal && numbers.price === 0)
+      return fail("free_with_meal items must not be priced at $0 (leave price_usd blank)");
+    if (freeWithMeal && !text(row.notes))
+      return fail("free_with_meal items need a note saying so (e.g. \"Free with entrees.\")");
 
     seen.add(id);
     items.push({
@@ -269,7 +285,8 @@ export function toItemRecords(rows: CsvRow[]): {
       allergens: allergens.values,
       tags: tags.values,
       allergensVerified,
-      allergenSource: allergensVerified ? allergenSource : null
+      allergenSource: allergensVerified ? allergenSource : null,
+      freeWithMeal
     });
   });
 
@@ -525,6 +542,7 @@ export interface MealRow {
   tags: string[];
   allergens_verified: boolean;
   allergen_source: string | null;
+  free_with_meal: boolean;
   serving_windows: ServingWindows; // null = whenever the location is open
   meal_role: MealRole | null; // set by applyMealRoles; the import refuses rows without one
 }
@@ -614,6 +632,7 @@ export function buildImportPlan(
       tags: item.tags,
       allergens_verified: item.allergensVerified,
       allergen_source: item.allergenSource,
+      free_with_meal: item.freeWithMeal,
       serving_windows: null,
       meal_role: null
     });

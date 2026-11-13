@@ -132,6 +132,45 @@ test("toItemRecords reads allergens, tags and allergens_verified", () => {
   assert.equal(plan.meals[1]?.allergens_verified, false);
 });
 
+test("toItemRecords reads free_with_meal; free items are never $0 and need a note", () => {
+  const header = `${HEADER},free_with_meal`;
+  const row = (id: string, price: string, notes: string, free: string) =>
+    `${id},Chick-fil-A,1901 Marketplace,Sauces,${id},1 packet,${price},140,,0,7,13,,yes,,,2026-10-05,${notes},${free}`;
+  const csv = [
+    header,
+    row("cfa--sauce", "", "Free with entrees.", "yes"),
+    row("cfa--sandwich", "6.49", "", ""),
+    row("cfa--drink", "2.89", "", "no"),
+    row("cfa--extra-sauce", "0.25", "Free with entrees.", "yes"),
+    row("bad--zero", "0.00", "Free with entrees.", "yes"),
+    row("bad--no-note", "", "", "yes"),
+    row("bad--flag", "", "", "sometimes")
+  ].join("\n");
+  const { items, problems } = toItemRecords(parseCsv(csv));
+  assert.deepEqual(
+    items.map((i) => [i.sourceId, i.freeWithMeal, i.price]),
+    [
+      ["cfa--sauce", true, null],
+      ["cfa--sandwich", false, 6.49],
+      ["cfa--drink", false, 2.89],
+      ["cfa--extra-sauce", true, 0.25]
+    ]
+  );
+  assert.deepEqual(
+    problems.map((p) => [p.id, p.message]),
+    [
+      ["bad--zero", "free_with_meal items must not be priced at $0 (leave price_usd blank)"],
+      ["bad--no-note", 'free_with_meal items need a note saying so (e.g. "Free with entrees.")'],
+      ["bad--flag", "free_with_meal must be yes or no"]
+    ]
+  );
+  const plan = buildImportPlan(items, []);
+  assert.equal(plan.meals.find((m) => m.source_id === "cfa--sauce")?.free_with_meal, true);
+  assert.equal(plan.meals.find((m) => m.source_id === "cfa--sandwich")?.free_with_meal, false);
+  // A free item gets no offering (no $0 price).
+  assert.equal(plan.offerings.some((o) => o.meal_source_id === "cfa--sauce"), false);
+});
+
 const WEEK = {
   mon: [{ open: "07:00", close: "20:00" }],
   tue: [{ open: "07:00", close: "20:00" }],
@@ -740,6 +779,8 @@ test("the real data files import without problems", () => {
     plan.meals.filter((meal) => meal.allergens_verified).length,
     120
   );
+  // Sauces and the Panda fortune cookie: free with a meal, never priced on their own.
+  assert.equal(plan.meals.filter((meal) => meal.free_with_meal).length, 12);
   assert.equal(plan.combos.length, 41);
 
   // Every fixed-content combo has contents; only verified ones are recommended.

@@ -10,7 +10,7 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
-import { defaultLogLocation, logLocations, mealLogFromItem, UNPRICED_LOG_NOTE } from "../../lib/mealLog";
+import { defaultLogLocation, logLocations, mealLogFromItem, priceText, unpricedLogNote } from "../../lib/mealLog";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 export function MealDetailPage({
@@ -129,7 +129,7 @@ export function MealDetailPage({
                 </p>
               )}
             </div>
-            <strong>{price == null ? "—" : `$${price.toFixed(2)}`}</strong>
+            <strong>{priceText(item, price)}</strong>
           </div>
 
           <div className="detail-nutrition-grid">
@@ -149,7 +149,11 @@ export function MealDetailPage({
           <section className="goal-fit-card">
             <h2>Why this fits your goals</h2>
             <p><span aria-hidden="true">✓</span> Nutrition information is shown so you can compare this meal with your daily goals.</p>
-            <p><span aria-hidden="true">✓</span> {price == null ? "Price is not currently available." : `Priced at $${price.toFixed(2)} at ${offering?.location_name ?? item.restaurant}.`}</p>
+            <p><span aria-hidden="true">✓</span> {price != null
+              ? `Priced at $${price.toFixed(2)} at ${offering?.location_name ?? item.restaurant}.`
+              : item.free_with_meal
+                ? "Free with a meal, not sold on its own."
+                : "Price is not currently available."}</p>
             {item.serving && <p><span aria-hidden="true">✓</span> Serving: {item.serving}</p>}
           </section>
 
@@ -191,7 +195,7 @@ export function MealDetailPage({
                 {locations.map((location) => (
                   <option key={location.location_id} value={location.location_id}>
                     {location.campus_area ?? location.location_name}
-                    {location.price == null ? " · price unavailable" : ` · $${location.price.toFixed(2)}`}
+                    {` · ${location.price == null && !item.free_with_meal ? "price unavailable" : priceText(item, location.price).toLowerCase()}`}
                     {location.availability === "not_now" ? " · not served now" : ""}
                   </option>
                 ))}
@@ -211,7 +215,7 @@ export function MealDetailPage({
               {log.logging ? "Adding…" : "Add to Today"}
             </button>
           </div>
-          {logLocation?.price == null && <p className="field-helper">{UNPRICED_LOG_NOTE}</p>}
+          {logLocation?.price == null && <p className="field-helper">{unpricedLogNote(item)}</p>}
 
           <section className="detail-alternatives">
             <h2>Lower-cost alternative nearby</h2>
