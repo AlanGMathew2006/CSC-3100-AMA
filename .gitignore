@@ -18,3 +18,12 @@ apps/web/vite.config.d.ts
 .claude/settings.local.json
 apps/web/test-results/
 apps/web/playwright-report/
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+crash.log
+crash.*.log
