@@ -738,7 +738,7 @@ test("the real data files import without problems", () => {
   assert.equal(plan.meals.length, 192);
   assert.equal(
     plan.meals.filter((meal) => meal.allergens_verified).length,
-    33
+    120
   );
   assert.equal(plan.combos.length, 41);
 
