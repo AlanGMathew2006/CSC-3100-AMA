@@ -71,11 +71,18 @@ export const UNPRICED_LOG_NOTE = "Price unavailable, not counted toward spending
 export const FREE_WITH_MEAL = "Free with a meal";
 export const FREE_WITH_MEAL_LOG_NOTE = "Free with a meal, not counted toward spending";
 
+export const COMBO_ONLY = "Combo only";
+
 // What to show where a price would go: the price, "Free with a meal" for sauces etc. that come
-// with a meal (data/menu_items.csv free_with_meal), or "Price unavailable".
-export function priceText(item: Pick<MenuItem, "free_with_meal">, price: number | null | undefined): string {
+// with a meal (data/menu_items.csv free_with_meal), "Combo only" for Panda bases and entrees
+// (priced through a Bowl or Plate), or "Price unavailable".
+export function priceText(
+  item: Pick<MenuItem, "free_with_meal"> & Partial<Pick<MenuItem, "meal_component">>,
+  price: number | null | undefined,
+): string {
   if (price != null) return `$${price.toFixed(2)}`;
-  return item.free_with_meal ? FREE_WITH_MEAL : "Price unavailable";
+  if (item.free_with_meal) return FREE_WITH_MEAL;
+  return item.meal_component ? COMBO_ONLY : "Price unavailable";
 }
 
 // The note under Add to Today (and in the toast) when the item is logged without a price.

@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import { macroMatch, type MenuItem, type Recommendation } from "@csc-3100-ama/shared";
 import {
   combinedAllergens,
   recommendationAsMenuItem,
   recommendationLabel,
+  recommendationParts,
   recommendationLog,
 } from "./recommendations";
 
@@ -53,6 +54,18 @@ describe("recommendationLabel", () => {
     assert.equal(recommendationLabel(four, 2), "Bigger Plate: Broccoli Beef + Orange Chicken +2 more");
     assert.equal(recommendationLabel(four, 4), "Bigger Plate: Broccoli Beef + Orange Chicken + Kung Pao Chicken + Chow Mein");
   });
+  it("marks half servings with ½", () => {
+    const half = rec({
+      combo: { id: "p1", name: "#1 Plate", price: 11.3 },
+      items: [
+        { meal_id: "beef", name: "Broccoli Beef", quantity: 1, unit_price: null, combo_part: "entree", meal_role: "main" },
+        { meal_id: "rice", name: "Fried Rice", quantity: 0.5, unit_price: null, combo_part: "base", meal_role: "main" },
+        { meal_id: "mein", name: "Chow Mein", quantity: 0.5, unit_price: null, combo_part: "base", meal_role: "main" },
+      ],
+    });
+    assert.equal(recommendationLabel(half), "#1 Plate: Broccoli Beef + ½ Fried Rice + ½ Chow Mein");
+    assert.deepEqual(recommendationParts(half), ["Broccoli Beef", "½ Fried Rice", "½ Chow Mein"]);
+  });
   it("joins standalone items without a combo", () => {
     assert.equal(
       recommendationLabel(rec({ combo: null, items: [{ meal_id: "a", name: "Tuna", quantity: 1, unit_price: 8, combo_part: null, meal_role: "main" }] })),
@@ -74,8 +87,17 @@ describe("recommendationAsMenuItem", () => {
     assert.equal(item?.calories, null);
     assert.equal(item?.protein_g, null);
   });
-  it("returns null when the meal is not in the menu", () => {
-    assert.equal(recommendationAsMenuItem(rec(), []), null);
+  it("still builds a card from the recommendation when the meal is not in the menu", () => {
+    const item = recommendationAsMenuItem(rec(), []);
+    assert.equal(item?.id, "rice");
+    assert.equal(item?.name, "Plate: Fried Rice + 2× Broccoli Beef");
+    assert.equal(item?.offerings[0]?.price, 11.3);
+    assert.equal(item?.calories, 820);
+    // Without menu data, allergens are unknown.
+    assert.equal(item?.allergens_verified, false);
+  });
+  it("returns null for a recommendation with no items", () => {
+    assert.equal(recommendationAsMenuItem(rec({ items: [] }), []), null);
   });
 });
 

@@ -10,6 +10,7 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { cheapestOffering, mealPrice } from "../../components/MealCard";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
+import { formatAmount } from "../../lib/format";
 import { defaultLogLocation, logLocations, mealLogFromItem, priceText, unpricedLogNote } from "../../lib/mealLog";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
@@ -73,7 +74,6 @@ export function MealDetailPage({
       <main className="app-content detail-content">
         {savedMeals.error && <p className="field-helper error" role="alert">{savedMeals.error}</p>}
         {menuError && <p className="field-helper error" role="alert">{menuError}</p>}
-        {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
         <div className="detail-heading">
           <button type="button" className="back-button" onClick={onBack}>
             <img src="/assets/figma/back.svg" alt="" />
@@ -129,18 +129,20 @@ export function MealDetailPage({
                 </p>
               )}
             </div>
-            <strong>{priceText(item, price)}</strong>
+            <strong className={price == null ? "detail-price-note" : undefined}>{priceText(item, price)}</strong>
           </div>
 
           <div className="detail-nutrition-grid">
-            {[
-              ["Calories", item.calories, ""],
-              ["Protein", item.protein_g, "g"],
-              ["Carbs", item.carbs_g, "g"],
-              ["Fat", item.fat_g, "g"],
-            ].map(([label, amount, unit]) => (
-              <div className="detail-nutrition" key={String(label)}>
-                <strong>{amount == null ? "—" : amount}{unit}</strong>
+            {(
+              [
+                ["Calories", item.calories, ""],
+                ["Protein", item.protein_g, "g"],
+                ["Carbs", item.carbs_g, "g"],
+                ["Fat", item.fat_g, "g"],
+              ] as const
+            ).map(([label, amount, unit]) => (
+              <div className="detail-nutrition" key={label}>
+                <strong>{formatAmount(amount, unit)}</strong>
                 <span>{label}</span>
               </div>
             ))}
@@ -215,6 +217,7 @@ export function MealDetailPage({
               {log.logging ? "Adding…" : "Add to Today"}
             </button>
           </div>
+          {log.error && <p className="field-helper error" role="alert">{log.error}</p>}
           {logLocation?.price == null && <p className="field-helper">{unpricedLogNote(item)}</p>}
 
           <section className="detail-alternatives">
@@ -232,9 +235,13 @@ export function MealDetailPage({
                 )}
                 <span>
                   <strong>{alternative.name}</strong>
-                  <small>{alternative.restaurant} · {alternative.calories ?? "—"} cal · lower-cost option</small>
+                  <small>
+                    {alternative.restaurant} ·{" "}
+                    {alternative.calories == null ? "calories unavailable" : `${formatAmount(alternative.calories)} cal`}{" "}
+                    · lower-cost option
+                  </small>
                 </span>
-                <b>{mealPrice(alternative) == null ? "—" : `$${mealPrice(alternative)?.toFixed(2)}`}</b>
+                <b>{priceText(alternative, mealPrice(alternative))}</b>
               </button>
             ) : (
               <p className="empty-card">No lower-cost alternative is available right now.</p>

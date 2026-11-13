@@ -84,6 +84,17 @@ Confirmed decisions:
   responsive and mobile-first.
 - Supabase is the planned backend for Auth, PostgreSQL data, and
   Row Level Security (RLS).
+- Web tests: `npm test` runs Vitest with jsdom (unit tests in
+  src/lib, page tests next to each page with the API layer mocked
+  via `vi.mock("../../lib/api")`, mock data in src/test/fixtures.ts).
+  `npm run test:e2e` (apps/web) is a Playwright smoke test that runs
+  the dev server with a fake session and a stubbed API (e2e/stubs.ts);
+  it is not part of `npm test`. First run: `npx playwright install
+  chromium`.
+- UI conventions: unknown values say "unavailable" (never 0 or
+  "—"), calories and grams are whole numbers (lib/format.ts), and a
+  missing price says "Free with a meal", "Combo only" or "Price
+  unavailable" (priceText in lib/mealLog.ts).
 
 # Future native-mobile direction
 

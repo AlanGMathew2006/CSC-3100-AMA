@@ -5,7 +5,7 @@ import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
 import { allergenLabel } from "../../lib/allergens";
-import { combinedAllergens, recommendationLabel, recommendationLog } from "../../lib/recommendations";
+import { combinedAllergens, quantityLabel, recommendationLabel, recommendationLog } from "../../lib/recommendations";
 import { servingLabel } from "../../lib/serving";
 
 const money = (amount: number) => `$${amount.toFixed(2)}`;
@@ -41,7 +41,7 @@ export function RecommendationDetailPage({
   onNavigate: (tab: AppTab) => void;
   onToast: (message: string) => void;
 }) {
-  const { menu, error: menuError } = useMenu();
+  const { menu, loading: menuLoading, error: menuError } = useMenu();
   const { logging, error: logError, addMeal } = useLogMeal();
   const menuItems = menu?.items ?? [];
   const allergens = combinedAllergens(rec, menuItems);
@@ -58,7 +58,6 @@ export function RecommendationDetailPage({
       <BrandHeader />
       <main className="app-content detail-content">
         {menuError && <p className="field-helper error" role="alert">{menuError}</p>}
-        {logError && <p className="field-helper error" role="alert">{logError}</p>}
         <div className="detail-heading">
           <button type="button" className="back-button" onClick={onBack}>
             <img src="/assets/figma/back.svg" alt="" />
@@ -69,7 +68,8 @@ export function RecommendationDetailPage({
         <div className="detail-body">
           <div className="detail-title-row">
             <div>
-              <h1>{recommendationLabel(rec)}</h1>
+              {/* A combo's parts are listed below, so its name is enough for the heading. */}
+              <h1>{rec.combo ? rec.combo.name : recommendationLabel(rec)}</h1>
               <p className="detail-location">
                 <span /> {rec.location.name}
               </p>
@@ -84,12 +84,12 @@ export function RecommendationDetailPage({
 
           <section className="detail-alternatives" aria-labelledby="meal-items-heading">
             <h2 id="meal-items-heading">What&apos;s in this meal</h2>
-            {rec.items.map((part) => {
+            {rec.items.map((part, index) => {
               const meal = menuItems.find((item) => item.id === part.meal_id);
               const serving = meal ? servingLabel(meal) : null;
               return (
                 <button
-                  key={part.meal_id}
+                  key={`${part.meal_id}-${index}`}
                   type="button"
                   className="detail-alternative-card"
                   disabled={!meal}
@@ -97,12 +97,9 @@ export function RecommendationDetailPage({
                 >
                   <span className="alternative-placeholder" aria-hidden="true" />
                   <span>
-                    <strong>
-                      {part.quantity > 1 ? `${part.quantity}× ` : ""}
-                      {part.name}
-                    </strong>
+                    <strong>{quantityLabel(part.quantity, part.name)}</strong>
                     <small>
-                      {lineNutrition(meal, part.quantity)}
+                      {!meal && menuLoading ? "Loading nutrition…" : lineNutrition(meal, part.quantity)}
                       {serving && ` · ${serving}`}
                     </small>
                   </span>
@@ -146,6 +143,7 @@ export function RecommendationDetailPage({
               {logging ? "Adding…" : "Add to Today"}
             </button>
           </div>
+          {logError && <p className="field-helper error" role="alert">{logError}</p>}
         </div>
       </main>
       <BottomNav active="home" onNavigate={onNavigate} />

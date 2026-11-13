@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it } from "vitest";
 import type { MenuCombo, MenuItem, MenuOffering } from "@csc-3100-ama/shared";
 import {
   comboLog,
@@ -184,6 +184,8 @@ describe("priceText / unpricedLogNote", () => {
     assert.equal(priceText({}, undefined), "Price unavailable");
     // A real price always wins, even on a free-with-meal item.
     assert.equal(priceText({ free_with_meal: true }, 0.5), "$0.50");
+    // Panda bases and entrees are priced through a Bowl or Plate.
+    assert.equal(priceText({ meal_component: "entree" }, null), "Combo only");
   });
 
   it("explains why an unpriced log doesn't count toward spending", () => {

@@ -227,20 +227,25 @@ Nothing is failing and there are no WIP commits. Known gaps (data, not bugs):
 
 ## 5. Click-through test list
 
+Updated in Sprint 4 part 2 (steps 3, 7, 13, 14, 15). `npm run test:e2e` (apps/web) walks most of this
+list in a browser with a stubbed API; the steps below still need a signed-in run against real data.
+
 Explore, Add to Today:
 1. Explore: every meal card has a "+" button. Tap "+" on a Chick-fil-A sandwich: toast "Added to
    today". Open the dashboard: the log is there, and calories, protein and spending went up.
 2. Tap "+" on a Subway item sold at both Subways: the details page opens instead. The location picker
    shows both locations with prices and defaults to an open one. Pick the other one, tap Add to Today:
    "Adding…", then "Added to today". The dashboard shows that location's price.
-3. Open an unpriced item (e.g. Chick-fil-A Sauce or a Panda entree): it says "Price unavailable, not
-   counted toward spending". Add it. On the dashboard, spending doesn't change and unknown macros
-   don't show as 0.
+3. Open Chick-fil-A Sauce: the price says "Free with a meal" and the note under Add to Today says
+   "Free with a meal, not counted toward spending". A Panda entree says "Combo only" on its card, and
+   an item with no price says "Price unavailable, not counted toward spending". Add one: on the
+   dashboard, spending doesn't change and unknown macros say "unavailable", never 0 or "—".
 4. Details page: "Save meal" still toggles the bookmark. "Not interested" is gone; Back works.
 5. With Open now off after 10:30, add a breakfast item (e.g. Spicy Chicken Biscuit). It's still
    logged and still labeled "Breakfast · until 10:30 am".
 6. MealCard on Dashboard and Saved has no "+".
-7. Turn off the network or stop the API and tap Add: an error shows and the button comes back.
+7. Turn off the network or stop the API and tap Add on a details page: the error shows right under
+   the buttons and the button comes back. Quick add ("+") on Explore shows the error in a toast.
 
 Combos & Meals:
 8. Tap "Plate": choose Chow Mein, Orange Chicken and Broccoli Beef. Add to Today stays disabled until
@@ -258,15 +263,16 @@ New combo recommendations:
 13. Profile goals 2000 cal / 75 g protein / 240 g carbs / 90 g fat, a $25 daily target, no
     allergens, no logs, weekday around 13:00: the top pick under "What should I eat next?" is
     Chick-fil-A "Chick-fil-A Deluxe Sandwich Meal: Chick-fil-A Deluxe Sandwich + Waffle Potato Fries
-    (Medium) +1 more", $12.45, Macro Match 99. That's cheaper than the $13.73 for the same three items
-    bought separately.
-14. Open that recommendation: the three items show "in combo", the combo line says "Chick-fil-A
-    Deluxe Sandwich Meal combo, $12.45", and allergens are "Allergen info incomplete" plus "Contains
-    at least: Milk, Egg, Soy, Wheat, Sesame" (fries and tea are unverified). Add to Today logs it at
-    $12.45.
-15. Set any allergen in Profile (e.g. Milk): no Chick-fil-A meal is recommended. The fries and tea
-    have unverified allergen info, and with an allergen set, unverified items are excluded, so each
-    meal's side and drink slots are left with no choices.
+    (Medium) +1 more", $12.45, Macro Match 99, with an "Includes: ..." line under the card listing all
+    three items. That's cheaper than the $13.73 for the same three items bought separately.
+14. Open that recommendation: the heading is "Chick-fil-A Deluxe Sandwich Meal", the three items
+    show "in combo", the combo line says "Chick-fil-A Deluxe Sandwich Meal combo, $12.45", and
+    allergens are "Contains: Milk, Egg, Wheat, Soy, Sesame" (fries and tea are verified now, so no
+    "incomplete"). Add to Today logs it at $12.45. A #1 Plate shows "½ Fried Rice" and "½ Chow Mein".
+15. Set Milk in Profile: Chick-fil-A meals whose parts have no milk (e.g. the Grilled Chicken
+    Sandwich Meal) can be recommended now that the fries and tea are verified; anything with milk
+    (the Deluxe meal, every Taco Bell main) is never recommended. Panda and most Subway subs are still
+    unverified, so they stay out for anyone with an allergen set.
 16. Taco Bell combos and the unverified Chick-fil-A meals never appear in recommendations.
 
 ## 6. Sample run vs. Sprint 3

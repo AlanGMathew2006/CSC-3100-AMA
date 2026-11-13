@@ -3122,3 +3122,79 @@ html[data-theme="dark"] .macro-match-row--under span:last-child,
 html[data-theme="dark"] .macro-match-row--unavailable span:last-child {
   color: var(--dark-muted);
 }
+
+/* ---------- Sprint 4 polish: focus, long names, empty-state actions ---------- */
+
+/* Keyboard focus is always visible (mouse clicks don't show it). */
+button:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid #154734;
+  outline-offset: 2px;
+}
+
+.explore-search:focus-within {
+  outline: 2px solid #154734;
+  outline-offset: 2px;
+}
+
+/* Long meal names wrap instead of pushing the price off a phone screen. */
+.detail-title-row > div {
+  min-width: 0;
+}
+
+.detail-title-row h1 {
+  overflow-wrap: anywhere;
+}
+
+.detail-title-row > strong {
+  flex-shrink: 0;
+}
+
+/* Item lines in a recommended meal wrap so nutrition and serving times aren't cut off. */
+.detail-alternative-card small {
+  white-space: normal;
+}
+
+.empty-card p {
+  margin: 0 0 8px;
+}
+
+.empty-card .link-button {
+  color: #154734;
+  font-size: 13px;
+  text-decoration: underline;
+}
+
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] select:focus-visible,
+html[data-theme="dark"] a:focus-visible,
+html[data-theme="dark"] .explore-search:focus-within {
+  outline-color: var(--dark-green-bright);
+}
+
+html[data-theme="dark"] .empty-card .link-button {
+  color: var(--dark-green-bright);
+}
+
+/* "Free with a meal" / "Price unavailable" where a price would be: smaller, so the name keeps room. */
+.detail-title-row > strong.detail-price-note {
+  max-width: 40%;
+  font-size: 14px;
+  text-align: right;
+}
+
+/* Lines under a "Best options" card. */
+.recommend-options > div {
+  display: grid;
+  gap: 6px;
+}
+
+/* Card titles get two lines before they're cut off, so names like "The Original Orange Chicken" fit. */
+.meal-card-heading strong {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
