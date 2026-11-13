@@ -16,3 +16,12 @@ apps/web/vite.config.js
 apps/web/vite.config.d.ts
 /skills-lock.json
 .claude/settings.local.json
+
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+crash.log
+crash.*.log
