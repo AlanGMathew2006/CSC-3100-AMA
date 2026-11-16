@@ -55,9 +55,21 @@ export function DashboardPage({
   const [preferencesError, setPreferencesError] = useState("");
 
   useEffect(() => {
+    let active = true;
     void fetchPreferences()
-      .then(setPreferences)
-      .catch((err: unknown) => setPreferencesError(errorMessage(err)));
+      .then((savedPreferences) => {
+        if (!active) return;
+        setPreferences(savedPreferences);
+        if (savedPreferences) {
+          document.documentElement.dataset.theme = savedPreferences.theme;
+        }
+      })
+      .catch((err: unknown) => {
+        if (active) setPreferencesError(errorMessage(err));
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const days = view === "daily" ? 1 : 7;

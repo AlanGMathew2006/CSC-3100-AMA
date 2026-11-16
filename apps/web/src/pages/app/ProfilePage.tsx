@@ -34,6 +34,7 @@ export function ProfilePage({
   const [balance, setBalance] = useState(String(profile.dining_dollars_balance));
   const [target, setTarget] = useState(String(profile.daily_spending_target ?? ""));
   const [loading, setLoading] = useState(true);
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -43,7 +44,10 @@ export function ProfilePage({
     let active = true;
     void fetchPreferences()
       .then((savedPreferences) => {
-        if (active) setPreferences({ ...EMPTY_PREFERENCES, ...savedPreferences });
+        if (active) {
+          setPreferences({ ...EMPTY_PREFERENCES, ...savedPreferences });
+          setPreferencesLoaded(true);
+        }
       })
       .catch((err: unknown) => {
         if (active) setError(errorMessage(err));
@@ -57,8 +61,9 @@ export function ProfilePage({
   }, []);
 
   useLayoutEffect(() => {
+    if (!preferencesLoaded) return;
     document.documentElement.dataset.theme = preferences.theme;
-  }, [preferences.theme]);
+  }, [preferences.theme, preferencesLoaded]);
 
   const toggleChoice = (key: "nutrition_priorities" | "dietary_restrictions", value: string) => {
     setPreferences((current) => ({

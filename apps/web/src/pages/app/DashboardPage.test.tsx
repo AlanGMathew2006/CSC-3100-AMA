@@ -33,6 +33,7 @@ function renderDashboard() {
 }
 
 beforeEach(() => {
+  document.documentElement.dataset.theme = "light";
   mocked.fetchDashboard.mockResolvedValue(DASHBOARD);
   mocked.fetchMenu.mockResolvedValue(MENU);
   mocked.fetchRecommendations.mockResolvedValue(RECOMMENDATIONS);
@@ -42,6 +43,12 @@ beforeEach(() => {
 });
 
 describe("DashboardPage recommendations", () => {
+  it("applies the saved theme when the dashboard loads", async () => {
+    mocked.fetchPreferences.mockResolvedValue({ ...PREFERENCES, theme: "dark" });
+    renderDashboard();
+    await waitFor(() => expect(document.documentElement.dataset.theme).toBe("dark"));
+  });
+
   it("shows a loading message until the recommendations arrive", async () => {
     let resolve: (value: RecommendationsResponse) => void = () => {};
     mocked.fetchRecommendations.mockReturnValue(new Promise((r) => (resolve = r)));
