@@ -134,4 +134,14 @@ describe("DashboardPage recommendations", () => {
     const fiber = (await screen.findAllByText("Fiber")).map((el) => el.closest("button")).find(Boolean)!;
     await waitFor(() => expect(within(fiber).getByText("0g · no goal")).toBeTruthy());
   });
+
+  it("shows the macro ring legend and colors each Nutrient Summary bar by nutrient", async () => {
+    renderDashboard();
+    expect(await screen.findByText(/^Protein · \d+ kcal$/)).toBeTruthy();
+    expect(screen.getByText(/^Carbs · \d+ kcal$/)).toBeTruthy();
+    expect(screen.getByText(/^Fat · \d+ kcal$/)).toBeTruthy();
+    expect(screen.getAllByText("Fiber")).toHaveLength(1); // only the Nutrient Summary tile
+    const bars = Array.from(document.querySelectorAll<HTMLElement>(".summary-progress i")).map((bar) => bar.style.background);
+    expect(bars).toEqual(["protein", "carbs", "fat", "fiber"].map((color) => `var(--macro-${color})`));
+  });
 });

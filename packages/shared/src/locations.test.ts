@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
-import type { MenuItem } from "@csc-3100-ama/shared";
-import { listedLocation } from "./locations";
+import { describe, it } from "node:test";
+import type { MenuItem } from "./index.js";
+import { listedLocation } from "./locations.js";
 
 // Mock data only.
 const base: MenuItem = {

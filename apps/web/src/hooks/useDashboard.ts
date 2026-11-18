@@ -1,6 +1,8 @@
+import {
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { useCallback, useEffect, useState } from "react";
 import { fetchDashboard } from "../lib/api";
-import { errorMessage } from "../lib/errors";
 import type { DashboardData, MealLogInput } from "../types/dashboard";
 import { useLogMeal } from "./useLogMeal";
 

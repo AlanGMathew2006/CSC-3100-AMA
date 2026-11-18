@@ -4,12 +4,21 @@
   "main": "index.ts",
   "dependencies": {
     "@csc-3100-ama/shared": "0.0.0",
+    "@expo-google-fonts/dm-sans": "^0.4.2",
+    "@expo-google-fonts/inter": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-navigation/bottom-tabs": "^7.22.0",
+    "@react-navigation/native": "^7.5.2",
+    "@react-navigation/native-stack": "^7.21.1",
     "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.26",
+    "expo-font": "~58.0.12",
     "expo-status-bar": "~58.0.5",
     "react": "19.3.0",
-    "react-native": "0.88.1"
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "~5.11.1",
+    "react-native-screens": "~4.30.1",
+    "react-native-svg": "15.16.0"
   },
   "devDependencies": {
     "@testing-library/react-native": "^14.1.0",

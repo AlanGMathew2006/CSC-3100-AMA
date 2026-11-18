@@ -1,6 +1,8 @@
+import {
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { useCallback, useEffect, useState } from "react";
 import { fetchSavedMeals, saveMeal, unsaveMeal } from "../lib/api";
-import { errorMessage } from "../lib/errors";
 import type { SavedMeal } from "../types/dashboard";
 
 export function useSavedMeals() {

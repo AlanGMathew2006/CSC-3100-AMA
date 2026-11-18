@@ -1,12 +1,8 @@
-import {
-  sumMacros,
-  type ItemAvailability,
-  type MenuCombo,
-  type MenuItem,
-  type OpenStatus,
-} from "@csc-3100-ama/shared";
-import type { MealLogInput } from "../types/dashboard";
-import { errorMessage } from "./errors";
+import { sumMacros } from "./combos.js";
+import type { MealLogInput } from "./dashboard-types.js";
+import { errorMessage } from "./errors.js";
+import type { ItemAvailability, OpenStatus } from "./hours.js";
+import type { MenuCombo, MenuItem } from "./index.js";
 
 // A place an item can be logged from, with its price there (null = no price at that location).
 export interface LogLocation {

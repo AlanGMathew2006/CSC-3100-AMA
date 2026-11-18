@@ -43,7 +43,7 @@ describe("api client", () => {
 
   it("asks for a limited number of recommendations", async () => {
     const { api, fetchImpl } = setup([jsonResponse(200, { recommendations: [] })]);
-    await api.fetchRecommendations(3);
+    await api.fetchRecommendations({ limit: 3 });
     expect(fetchImpl.mock.calls[0][0]).toBe("http://192.168.1.20:8000/api/recommendations?limit=3");
   });
 

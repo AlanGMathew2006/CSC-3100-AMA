@@ -1,17 +1,26 @@
 import { useState } from "react";
-import { macroMatch, type MenuItem } from "@csc-3100-ama/shared";
+import {
+  cheapestOffering,
+  macroMatch,
+  mealPrice,
+  type MenuItem,
+  allergenLabel,
+  listedLocation,
+  servingLabel,
+  servingStatusText,
+  formatAmount,
+  defaultLogLocation,
+  logLocations,
+  mealLogFromItem,
+  priceText,
+  unpricedLogNote,
+} from "@csc-3100-ama/shared";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useMealTargets } from "../../hooks/useRecommendations";
-import { allergenLabel } from "../../lib/allergens";
-import { listedLocation } from "../../lib/locations";
-import { servingLabel, servingStatusText } from "../../lib/serving";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { cheapestOffering, mealPrice } from "../../components/MealCard";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
-import { formatAmount } from "../../lib/format";
-import { defaultLogLocation, logLocations, mealLogFromItem, priceText, unpricedLogNote } from "../../lib/mealLog";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 export function MealDetailPage({

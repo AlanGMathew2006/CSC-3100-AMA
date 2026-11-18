@@ -1,9 +1,12 @@
 import { requireSupabase } from "./supabase";
-import type {
-  MealTargetsResponse,
-  MenuResponse,
-  OnboardingInput,
-  RecommendationsResponse,
+import {
+  dashboardQuery,
+  recommendationQuery,
+  type MealTargetsResponse,
+  type MenuResponse,
+  type OnboardingInput,
+  type RecommendationParams,
+  type RecommendationsResponse,
 } from "@csc-3100-ama/shared";
 import type {
   DashboardData,
@@ -69,23 +72,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return body as T;
 }
 
-function localDayStart(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function localWeekStart(): Date {
-  const start = localDayStart();
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
-  return start;
-}
-
 export function fetchDashboard(): Promise<DashboardData> {
-  const params = new URLSearchParams({
-    day_start: localDayStart().toISOString(),
-    week_start: localWeekStart().toISOString(),
-  });
-  return request<DashboardData>(`/api/dashboard?${params}`);
+  return request<DashboardData>(`/api/dashboard${dashboardQuery()}`);
 }
 
 export function fetchMealLogs(from?: string): Promise<MealLogInput[]> {
@@ -128,21 +116,6 @@ export function completeOnboarding(input: OnboardingInput): Promise<void> {
 
 export function fetchMenu(): Promise<MenuResponse> {
   return request<MenuResponse>("/api/menu");
-}
-
-export interface RecommendationParams {
-  limit?: number;
-  locationId?: string;
-  mealsRemaining?: number;
-}
-
-function recommendationQuery({ limit, locationId, mealsRemaining }: RecommendationParams): string {
-  const params = new URLSearchParams();
-  if (limit != null) params.set("limit", String(limit));
-  if (locationId) params.set("location_id", locationId);
-  if (mealsRemaining != null) params.set("meals_remaining", String(mealsRemaining));
-  const query = params.toString();
-  return query ? `?${query}` : "";
 }
 
 export function fetchRecommendations(

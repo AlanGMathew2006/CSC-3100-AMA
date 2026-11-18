@@ -1,42 +1,29 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
+import {
+  ALLERGEN_SAVE_FAILED_MESSAGE,
+  DEFAULT_ONBOARDING_VALUES,
+  DIETARY_OPTIONS,
+  HALAL_FRIENDLY_NOTE,
+  NUTRITION_PRIORITIES as PRIORITIES,
+  onboardingInput,
+  toggleValue,
+  validateOnboarding,
+  type OnboardingFieldName as FieldName,
+  type OnboardingValues,
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { AvoidancePicker } from "../../components/AvoidancePicker";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
 import { completeOnboarding, fetchLocations, updatePreferences } from "../../lib/api";
-import { errorMessage } from "../../lib/errors";
 import type { DiningLocation } from "../../types/dashboard";
 
 type OnboardingPageProps = {
   onComplete: () => void;
 };
 
-type FieldName = "balance" | "target" | "calories" | "protein" | "carbs" | "fat";
-
-const PRIORITIES = ["High protein", "Lower calorie", "Balanced", "Budget-friendly"];
-const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal-friendly", "Gluten-free", "No seafood"];
-const toNumber = (value: string): number => Number(value.trim());
-
-const isValid = (value: string): boolean => {
-  const trimmed = value.trim();
-  return trimmed !== "" && Number.isFinite(Number(trimmed)) && Number(trimmed) >= 0;
-};
-
-function toggleValue(value: string, values: string[]): string[] {
-  return values.includes(value)
-    ? values.filter((current) => current !== value)
-    : [...values, value];
-}
-
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
-  const [values, setValues] = useState<Record<FieldName, string>>({
-    balance: "",
-    target: "",
-    calories: "2000",
-    protein: "100",
-    carbs: "250",
-    fat: "70",
-  });
+  const [values, setValues] = useState<OnboardingValues>(DEFAULT_ONBOARDING_VALUES);
   const [errorField, setErrorField] = useState<FieldName | null>(null);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -65,42 +52,24 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     setError("");
     setErrorField(null);
 
-    const invalid = (Object.keys(values) as FieldName[]).find(
-      (name) => !isValid(values[name]),
-    );
-    if (invalid) {
-      setErrorField(invalid);
-      setError("Enter a number of 0 or more in every field.");
-      return;
-    }
-    const fractionalGoal = (
-      ["calories", "protein", "carbs", "fat"] as const
-    ).find((name) => !Number.isInteger(toNumber(values[name])));
-    if (fractionalGoal) {
-      setErrorField(fractionalGoal);
-      setError("Enter whole numbers for your nutrition goals.");
+    const issue = validateOnboarding(values);
+    if (issue) {
+      setErrorField(issue.field);
+      setError(issue.message);
       return;
     }
 
     setSubmitting(true);
     try {
-      await completeOnboarding({
-        dining_dollars_balance: toNumber(values.balance),
-        daily_spending_target: toNumber(values.target),
-        calories: toNumber(values.calories),
-        protein_g: toNumber(values.protein),
-        carbs_g: toNumber(values.carbs),
-        fat_g: toNumber(values.fat),
-        nutrition_priorities: nutritionPriorities,
-        dietary_restrictions: dietaryRestrictions,
-        preferred_location_ids: preferredLocations,
-      });
+      await completeOnboarding(
+        onboardingInput(values, { nutritionPriorities, dietaryRestrictions, preferredLocations }),
+      );
       // The onboarding endpoint doesn't take these, so they go through the preferences endpoint.
       if (allergens.length > 0 || excludedFoods.length > 0) {
         try {
           await updatePreferences({ allergens, excluded_foods: excludedFoods });
         } catch {
-          setError("Your plan was saved, but we couldn't save your allergens and avoided foods. Try again.");
+          setError(ALLERGEN_SAVE_FAILED_MESSAGE);
           return;
         }
       }

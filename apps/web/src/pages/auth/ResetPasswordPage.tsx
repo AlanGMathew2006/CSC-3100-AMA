@@ -3,7 +3,7 @@ import { useAuth } from "../../auth";
 import { usePasswordRecovery } from "../../passwordRecovery";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
-import { authErrorMessage } from "../../lib/authErrors";
+import { authErrorMessage } from "@csc-3100-ama/shared";
 import {
   PASSWORD_HINT,
   validateNewPassword,

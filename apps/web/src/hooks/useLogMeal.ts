@@ -1,6 +1,8 @@
+import {
+  submitMealLog,
+} from "@csc-3100-ama/shared";
 import { useState } from "react";
 import { logMeal } from "../lib/api";
-import { submitMealLog } from "../lib/mealLog";
 import type { MealLogInput } from "../types/dashboard";
 
 // Logs one meal to today. The dashboard reloads its data whenever it opens, so a log added

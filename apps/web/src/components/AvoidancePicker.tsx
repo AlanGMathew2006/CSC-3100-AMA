@@ -1,6 +1,14 @@
 import { useState } from "react";
-import { ALLERGENS, normalizeAllergen } from "@csc-3100-ama/shared";
-import { allergenLabel } from "../lib/allergens";
+import {
+  ALLERGENS,
+  ALLERGEN_HIDDEN_NOTE,
+  AVOID_FOOD_NOTE,
+  MAX_FOOD_LENGTH,
+  addExcludedFood,
+  allergenLabel,
+  isAllergenSelected,
+  toggleAllergen,
+} from "@csc-3100-ama/shared";
 
 type AvoidancePickerProps = {
   allergens: string[];
@@ -8,8 +16,6 @@ type AvoidancePickerProps = {
   onAllergensChange: (allergens: string[]) => void;
   onExcludedFoodsChange: (foods: string[]) => void;
 };
-
-const MAX_FOOD_LENGTH = 100; // the API accepts strings up to 100 characters
 
 // Allergens and foods to avoid, shared by onboarding and the Profile page.
 // Allergens are stored as codes ("tree_nut"); older values like "Nuts" still count.
@@ -21,24 +27,12 @@ export function AvoidancePicker({
 }: AvoidancePickerProps) {
   const [food, setFood] = useState("");
 
-  const isSelected = (code: string) =>
-    allergens.some((value) => normalizeAllergen(value) === code);
-
-  function toggleAllergen(code: string) {
-    onAllergensChange(
-      isSelected(code)
-        ? allergens.filter((value) => normalizeAllergen(value) !== code)
-        : [...allergens, code],
-    );
-  }
+  const isSelected = (code: string) => isAllergenSelected(allergens, code);
 
   function addFood() {
-    const name = food.trim();
-    if (!name) return;
-    if (!excludedFoods.some((entry) => entry.toLowerCase() === name.toLowerCase())) {
-      onExcludedFoodsChange([...excludedFoods, name]);
-    }
-    setFood("");
+    const next = addExcludedFood(excludedFoods, food);
+    if (next !== excludedFoods) onExcludedFoodsChange(next);
+    if (food.trim()) setFood("");
   }
 
   return (
@@ -52,16 +46,14 @@ export function AvoidancePicker({
               type="button"
               className={`choice-chip${isSelected(code) ? " choice-chip--selected" : ""}`}
               aria-pressed={isSelected(code)}
-              onClick={() => toggleAllergen(code)}
+              onClick={() => onAllergensChange(toggleAllergen(allergens, code))}
             >
               {allergenLabel(code)}
             </button>
           ))}
         </div>
         {allergens.length > 0 && (
-          <p className="field-helper">
-            Meals without verified allergen information are hidden while an allergen is selected.
-          </p>
+          <p className="field-helper">{ALLERGEN_HIDDEN_NOTE}</p>
         )}
       </fieldset>
 
@@ -86,7 +78,7 @@ export function AvoidancePicker({
             Add
           </button>
         </div>
-        <p className="field-helper">Hides meals with this word in their name.</p>
+        <p className="field-helper">{AVOID_FOOD_NOTE}</p>
         {excludedFoods.length > 0 && (
           <div className="choice-list">
             {excludedFoods.map((entry) => (

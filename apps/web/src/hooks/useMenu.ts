@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import type { MenuResponse } from "@csc-3100-ama/shared";
+import {
+  type MenuResponse,
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { fetchMenu } from "../lib/api";
-import { errorMessage } from "../lib/errors";
 
 export function useMenu() {
   const [menu, setMenu] = useState<MenuResponse | null>(null);

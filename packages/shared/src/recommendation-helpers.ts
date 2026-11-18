@@ -1,10 +1,28 @@
-import {
-  ALLERGENS,
-  type MenuItem,
-  type Recommendation,
-  type RecommendationsReason,
-} from "@csc-3100-ama/shared";
-import type { MealLogInput } from "../types/dashboard";
+import { ALLERGENS } from "./dietary.js";
+import type { MealLogInput } from "./dashboard-types.js";
+import type { MenuItem } from "./index.js";
+import type { Recommendation, RecommendationItem, RecommendationsReason } from "./recommendations.js";
+
+// "450 cal · 30g protein · 40g carbs · 18g fat" for an item of a recommendation at its quantity;
+// unknown values say "unavailable", never 0.
+export function lineNutrition(meal: MenuItem | undefined, quantity: number): string {
+  const amount = (value: number | null | undefined, unit: string, label: string) =>
+    value == null ? `${label} unavailable` : `${Math.round(value * quantity)}${unit} ${label}`;
+  return [
+    amount(meal?.calories, "", "cal"),
+    amount(meal?.protein_g, "g", "protein"),
+    amount(meal?.carbs_g, "g", "carbs"),
+    amount(meal?.fat_g, "g", "fat"),
+  ].join(" · ");
+}
+
+// The price on an item line of a recommendation: "in combo" for parts of a combo, otherwise its
+// unit price ("$8.49 each" for more than one).
+export function linePrice(item: RecommendationItem): string {
+  if (item.unit_price == null) return "in combo";
+  const price = `$${item.unit_price.toFixed(2)}`;
+  return item.quantity > 1 ? `${price} each` : price;
+}
 
 // "2× Broccoli Beef", "½ Fried Rice" (half of a half-and-half base), "Chow Mein".
 export const quantityLabel = (quantity: number, name: string) =>
