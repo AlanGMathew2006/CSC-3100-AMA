@@ -58,6 +58,11 @@ I did not commit Expo web support: `react-dom` and `react-native-web` can't be a
 - `expo-doctor` failed with duplicate React after adding React Navigation: npm put its core package at the repository root, where it resolves the web app's React 18. I moved those packages (`@react-navigation/core`, `routers`, `use-latest-callback`, `use-sync-external-store`, `standard-navigation`, `react-freeze`, `sf-symbols-typescript`) under `apps/mobile` in `package-lock.json`. `npm ci` accepts it and doctor is 20/20. If a future `npm install` hoists them again, re-check `npx expo-doctor`.
 - Font weights are imported from each `@expo-google-fonts/.../<weight>` folder because the package root pulls in a hook that needs `expo-font` from the repository root (not resolvable in Jest).
 - Test data for the mobile screens is a copy of the web fixtures (`apps/mobile/src/test/fixtures.ts`).
+- Nutrition ring: `nutritionRingSegments`, `ringLegendText` and `ringArcs` in `packages/shared/src/dashboard.ts` give both apps the same segments (protein, carbs, fat; kcal = g × 4, 4, 9; each share is kcal / max(calorie goal, total macro kcal), so the ring never overflows). Missing macros count as 0 for drawing only. Without a goal the ring scales to the macro total; weekly uses the weekly totals and the 7-day goal. A segment with 0 kcal is not drawn, and a lone segment has no gap.
+- Colors are the existing legend colors: `palette.legend` on mobile, and new `--macro-*` CSS variables on web that hold the same hex values the legend dots already used (light and dark). The old `ringArc` and `summaryFill` mobile tokens were unused after this and removed.
+- Web: the ring is now a small `NutritionRing` component with an SVG drawn on the gray face (the old conic-gradient arc sat under the disc). Gaps between segments are 3 px, and round caps match the old arc.
+- The ring legend shows Protein, Carbs and Fat with rounded kcal; Fiber stays in the Nutrient Summary tiles, whose bars now use each nutrient's color.
+- I did not set up Expo web + Playwright for a side-by-side screenshot; the check is the unit tests plus the shared geometry used by both.
 
 ## Left for phase 3 and later
 
@@ -79,4 +84,4 @@ Same setup as PR #79 (README, "Mobile app"): `.env` in `apps/mobile`, API runnin
 
 ## Checks run
 
-`npm run build`, `npm run lint`, `npm test` (web 79, shared 108, backend 79), backend typecheck, `npm run typecheck:mobile`, `npm run lint:mobile`, `npm run test:mobile` (70 Jest tests), `npx expo-doctor` (20/20) and `npx expo export --platform ios` pass. Not run on a real iPhone by me: please do the walk-through above.
+`npm run build`, `npm run lint`, `npm test` (web 82, shared 115, backend 79), backend typecheck, `npm run typecheck:mobile`, `npm run lint:mobile`, `npm run test:mobile` (73 Jest tests), `npx expo-doctor` (20/20) and `npx expo export --platform ios` pass. Not run on a real iPhone by me: please do the walk-through above.

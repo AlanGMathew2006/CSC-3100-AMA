@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { diningDollarsView, displayName, greeting, nutritionView, weeklyBarPercent, weeklyDays } from "./dashboard.js";
+import { diningDollarsView, displayName, greeting, nutritionRingSegments, nutritionView, ringArcs, ringLegendText, weeklyBarPercent, weeklyDays } from "./dashboard.js";
 import type { DashboardData } from "./dashboard-types.js";
 
 // Mock data only.
@@ -103,5 +103,70 @@ describe("weeklyDays", () => {
     assert.deepEqual(days.map((day) => day.calories), [500, 0, 0, 0, 0, 0, 0]);
     assert.equal(weeklyBarPercent(0, 2000), 0);
     assert.equal(weeklyBarPercent(10, 2000), 8);
+  });
+});
+
+describe("nutritionRingSegments", () => {
+  const withMacros = (today: Partial<DashboardData["today"]>, goal: number | null, week = data.week): DashboardData => ({
+    ...data,
+    goals: { ...data.goals!, calories: goal },
+    today: { ...data.today, ...today },
+    week,
+  });
+  const fractions = (segments: ReturnType<typeof nutritionRingSegments>) => segments.map((s) => s.fraction);
+
+  it("splits a normal day by macro kcal over the calorie goal", () => {
+    const segments = nutritionRingSegments(withMacros({ protein_g: 51, carbs_g: 100, fat_g: 20 }, 2000), "daily");
+    assert.deepEqual(segments.map((s) => s.key), ["protein", "carbs", "fat"]);
+    assert.deepEqual(segments.map((s) => s.kcal), [204, 400, 180]);
+    assert.deepEqual(fractions(segments), [0.102, 0.2, 0.09]);
+    assert.equal(ringLegendText(segments[0]), "Protein · 204 kcal");
+  });
+
+  it("never overflows when macros are over the goal", () => {
+    const segments = nutritionRingSegments(withMacros({ protein_g: 200, carbs_g: 300, fat_g: 100 }, 1000), "daily");
+    assert.deepEqual(segments.map((s) => s.kcal), [800, 1200, 900]);
+    const sum = fractions(segments).reduce((a, b) => a + b, 0);
+    assert.ok(Math.abs(sum - 1) < 1e-9);
+    assert.ok(Math.abs(segments[0].fraction - 800 / 2900) < 1e-9);
+  });
+
+  it("scales to the macro total without a calorie goal", () => {
+    const segments = nutritionRingSegments(withMacros({ protein_g: 25, carbs_g: 25, fat_g: 0 }, null), "daily");
+    assert.deepEqual(fractions(segments), [0.5, 0.5, 0]);
+  });
+
+  it("is empty when nothing is eaten, with or without a goal", () => {
+    assert.deepEqual(fractions(nutritionRingSegments(withMacros({ protein_g: 0, carbs_g: 0, fat_g: 0 }, 2000), "daily")), [0, 0, 0]);
+    assert.deepEqual(fractions(nutritionRingSegments(withMacros({ protein_g: 0 }, null), "daily")), [0, 0, 0]);
+    assert.deepEqual(fractions(nutritionRingSegments(null, "daily")), [0, 0, 0]);
+    assert.deepEqual(ringArcs(nutritionRingSegments(null, "daily"), 50, 6), []);
+  });
+
+  it("counts missing macros as 0", () => {
+    const missing = withMacros({ protein_g: undefined, carbs_g: 50, fat_g: undefined } as never, 1000);
+    const segments = nutritionRingSegments(missing, "daily");
+    assert.deepEqual(segments.map((s) => s.kcal), [0, 200, 0]);
+    assert.deepEqual(fractions(segments), [0, 0.2, 0]);
+  });
+
+  it("uses the weekly totals and a 7-day goal in the weekly view", () => {
+    const week = { ...data.week, protein_g: 350, carbs_g: 700, fat_g: 70 };
+    const segments = nutritionRingSegments(withMacros({}, 2000, week), "weekly");
+    assert.deepEqual(segments.map((s) => s.kcal), [1400, 2800, 630]);
+    assert.ok(Math.abs(segments[1].fraction - 2800 / 14000) < 1e-9);
+  });
+
+  it("makes arcs in order with gaps, and a single segment without one", () => {
+    const radius = 50;
+    const circumference = 2 * Math.PI * radius;
+    const arcs = ringArcs(nutritionRingSegments(withMacros({ protein_g: 100, carbs_g: 100, fat_g: 0 }, 2000), "daily"), radius, 6, 3);
+    assert.deepEqual(arcs.map((a) => a.key), ["protein", "carbs"]);
+    assert.ok(Math.abs(arcs[0].dash - (0.2 * circumference - 9)) < 1e-9);
+    assert.ok(Math.abs(arcs[1].offset + (0.2 * circumference + 4.5)) < 1e-9);
+    const single = ringArcs(nutritionRingSegments(withMacros({ protein_g: 100, carbs_g: 0, fat_g: 0 }, 2000), "daily"), radius, 6, 3);
+    assert.equal(single.length, 1);
+    assert.ok(Math.abs(single[0].dash - 0.2 * circumference) < 1e-9);
+    assert.equal(single[0].offset, -0);
   });
 });

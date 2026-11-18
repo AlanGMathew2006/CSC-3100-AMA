@@ -1190,16 +1190,31 @@ button.eye-icon {
 .nutrition-chart {
   width: 104px;
   height: 104px;
-  background: conic-gradient(#3b82f6 0 24%, #f0f1f2 24% 100%);
+  background: #f0f1f2;
 }
 
-.nutrition-chart::before {
+.nutrition-chart::before,
+.nutrition-chart::after {
   display: none;
 }
 
-.nutrition-chart::after {
+.nutrition-ring {
+  position: absolute;
   inset: 0;
-  background: #f0f1f2;
+}
+
+:root {
+  --macro-protein: #3b82f6;
+  --macro-carbs: #f59e0b;
+  --macro-fat: #8b5cf6;
+  --macro-fiber: #14b8a6;
+}
+
+html[data-theme="dark"] {
+  --macro-protein: #60a5fa;
+  --macro-carbs: #fbbf24;
+  --macro-fat: #a78bfa;
+  --macro-fiber: #2dd4bf;
 }
 
 .chart-center {
@@ -1235,19 +1250,19 @@ button.eye-icon {
 }
 
 .legend-dot--protein {
-  background: #3b82f6;
+  background: var(--macro-protein);
 }
 
 .legend-dot--carbs {
-  background: #f59e0b;
+  background: var(--macro-carbs);
 }
 
 .legend-dot--fat {
-  background: #8b5cf6;
+  background: var(--macro-fat);
 }
 
 .legend-dot--fiber {
-  background: #14b8a6;
+  background: var(--macro-fiber);
 }
 
 .nutrition-card--weekly {
@@ -2805,10 +2820,6 @@ html[data-theme="dark"] .action-button {
 }
 
 html[data-theme="dark"] .nutrition-chart {
-  background: conic-gradient(#60a5fa 0 24%, var(--dark-track) 24% 100%);
-}
-
-html[data-theme="dark"] .nutrition-chart::after {
   background: var(--dark-track);
 }
 
@@ -2842,19 +2853,19 @@ html[data-theme="dark"] .detail-alternatives h2 {
 }
 
 html[data-theme="dark"] .legend-dot--protein {
-  background: #60a5fa;
+  background: var(--macro-protein);
 }
 
 html[data-theme="dark"] .legend-dot--carbs {
-  background: #fbbf24;
+  background: var(--macro-carbs);
 }
 
 html[data-theme="dark"] .legend-dot--fat {
-  background: #a78bfa;
+  background: var(--macro-fat);
 }
 
 html[data-theme="dark"] .legend-dot--fiber {
-  background: #2dd4bf;
+  background: var(--macro-fiber);
 }
 
 html[data-theme="dark"] .weekly-chart {
@@ -2880,7 +2891,7 @@ html[data-theme="dark"] .weekly-bar-column:nth-child(5) .weekly-bar-track i {
 }
 
 html[data-theme="dark"] .summary-progress i {
-  background: #60a5fa;
+  background: var(--macro-protein);
 }
 
 html[data-theme="dark"] .dollars-card {

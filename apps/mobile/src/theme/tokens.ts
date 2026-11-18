@@ -51,9 +51,7 @@ export interface Palette {
   // Nutrition card
   track: string; // ring disc and bar tracks
   legend: { protein: string; carbs: string; fat: string; fiber: string };
-  ringArc: string;
   summaryTrack: string;
-  summaryFill: string;
   weeklyTrackBorder: string;
   weeklyTrackBg: string;
   weeklyFill: string;
@@ -137,9 +135,7 @@ export const light: Palette = {
   bellIcon: "#154734",
   track: "#f0f1f2",
   legend: { protein: "#3b82f6", carbs: "#f59e0b", fat: "#8b5cf6", fiber: "#14b8a6" },
-  ringArc: "#3b82f6",
   summaryTrack: "#e7e8e9",
-  summaryFill: "#3b82f6",
   weeklyTrackBorder: "#e3e6e8",
   weeklyTrackBg: "#ffffff",
   weeklyFill: "#154734",
@@ -218,9 +214,7 @@ export const dark: Palette = {
   bellIcon: "#ffffff",
   track: "#24322c",
   legend: { protein: "#60a5fa", carbs: "#fbbf24", fat: "#a78bfa", fiber: "#2dd4bf" },
-  ringArc: "#60a5fa",
   summaryTrack: "#24322c",
-  summaryFill: "#60a5fa",
   weeklyTrackBorder: "#304139",
   weeklyTrackBg: "#24322c",
   weeklyFill: "#2e7d62",

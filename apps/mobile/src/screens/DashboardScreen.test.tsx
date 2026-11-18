@@ -55,6 +55,19 @@ beforeEach(() => {
   mocked.logMeal.mockReset().mockResolvedValue({});
 });
 
+describe("DashboardScreen nutrition ring", () => {
+  it("lists Protein, Carbs and Fat with their kcal beside the ring, and no Fiber there", async () => {
+    mocked.fetchRecommendations.mockResolvedValue(RECOMMENDATIONS);
+    await renderDashboard();
+    // 60 g protein, 100 g carbs, 30 g fat today.
+    expect(await screen.findByText("Protein · 240 kcal")).toBeTruthy();
+    expect(screen.getByText("Carbs · 400 kcal")).toBeTruthy();
+    expect(screen.getByText("Fat · 270 kcal")).toBeTruthy();
+    expect(screen.getAllByText("Fiber")).toHaveLength(1); // only the Nutrient Summary tile
+    expect(screen.getAllByTestId(/^ring-segment-/)).toHaveLength(3);
+  });
+});
+
 describe("DashboardScreen recommendations", () => {
   it("shows a loading message until the recommendations arrive", async () => {
     let resolve: (value: RecommendationsResponse) => void = () => {};

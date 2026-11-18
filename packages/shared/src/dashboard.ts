@@ -113,6 +113,73 @@ export function nutritionView(data: DashboardData | null, view: DashboardView): 
   };
 }
 
+export type RingColor = "protein" | "carbs" | "fat";
+
+export interface RingSegment {
+  key: RingColor;
+  label: string;
+  // Calories from this macro: protein and carbs 4 per gram, fat 9 per gram.
+  kcal: number;
+  // Share of the whole circle (0-1). The rest of the circle stays the gray track.
+  fraction: number;
+}
+
+const KCAL_PER_GRAM: Record<RingColor, number> = { protein: 4, carbs: 4, fat: 9 };
+
+// The three colored parts of the nutrition ring, in drawing order starting at 12 o'clock.
+// Uses the same totals and calorie goal as nutritionView. Missing macros count as 0.
+// Each share is kcal / max(calorie goal, total macro kcal), so the ring never overflows;
+// without a calorie goal the ring is scaled to the total macro kcal.
+export function nutritionRingSegments(data: DashboardData | null, view: DashboardView): RingSegment[] {
+  const totals = data ? (view === "daily" ? data.today : data.week) : null;
+  const goal = data?.goals?.calories == null ? 0 : data.goals.calories * (view === "daily" ? 1 : 7);
+  const parts: Array<[RingColor, string, number | undefined]> = [
+    ["protein", "Protein", totals?.protein_g],
+    ["carbs", "Carbs", totals?.carbs_g],
+    ["fat", "Fat", totals?.fat_g],
+  ];
+  const kcals = parts.map(([key, , grams]) => (Number.isFinite(grams) ? Math.max(grams ?? 0, 0) : 0) * KCAL_PER_GRAM[key]);
+  const denominator = Math.max(goal, kcals.reduce((sum, kcal) => sum + kcal, 0));
+  return parts.map(([key, label], index) => ({
+    key,
+    label,
+    kcal: kcals[index],
+    fraction: denominator > 0 ? kcals[index] / denominator : 0,
+  }));
+}
+
+export const ringLegendText = (segment: RingSegment) => `${segment.label} · ${Math.round(segment.kcal)} kcal`;
+
+export interface RingArc {
+  key: RingColor;
+  // stroke-dasharray "<dash> <circumference>" and stroke-dashoffset for a circle starting at 12 o'clock
+  // (rotate the circle -90 degrees), drawn with round caps.
+  dash: number;
+  offset: number;
+}
+
+// Dash lengths for drawing the segments as round-capped arcs with a small gap between them.
+export function ringArcs(segments: RingSegment[], radius: number, stroke: number, gap = 3): RingArc[] {
+  const circumference = 2 * Math.PI * radius;
+  const visible = segments.filter((segment) => segment.fraction > 0);
+  let start = 0;
+  const arcs: RingArc[] = [];
+  for (const segment of segments) {
+    const length = segment.fraction * circumference;
+    if (segment.fraction > 0) {
+      // Round caps stick out half a stroke at each end, so shorten the dash to keep the gap.
+      const inset = visible.length > 1 ? (gap + stroke) / 2 : 0;
+      arcs.push({
+        key: segment.key,
+        dash: Math.max(length - 2 * inset, 0.01),
+        offset: -(start + inset),
+      });
+    }
+    start += length;
+  }
+  return arcs;
+}
+
 export interface WeeklyDay {
   label: string;
   calories: number;

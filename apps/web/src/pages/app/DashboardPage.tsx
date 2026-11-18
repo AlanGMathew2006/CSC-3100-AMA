@@ -13,6 +13,7 @@ import {
   maxDailyCalories,
   money,
   nutritionHeading,
+  nutritionRingSegments,
   nutritionView,
   recommendationEntries,
   recommendationLog,
@@ -30,6 +31,7 @@ import { useRecommendations } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
 import type { UserPreferences } from "../../types/dashboard";
+import { NutritionRing } from "../../components/NutritionRing";
 import { NutritionSheet } from "./NutritionSheet";
 
 export function DashboardPage({
@@ -166,21 +168,12 @@ export function DashboardPage({
         </h2>
 
         <section className={`nutrition-card${view === "weekly" ? " nutrition-card--weekly" : ""}`}>
-          <div className="nutrition-chart" aria-label="Nutrition summary">
-            <div className="chart-center">
-              <strong>{nutrition.centerValue}</strong>
-              <span>{nutrition.centerLabel}</span>
-              <small>{nutrition.centerDetail}</small>
-            </div>
-          </div>
-          <div className="legend-list">
-            {macros.map((macro) => (
-              <div className="legend-item" key={macro.key}>
-                <span className={`legend-dot legend-dot--${macro.color}`} />
-                {macro.label}
-              </div>
-            ))}
-          </div>
+          <NutritionRing
+            value={nutrition.centerValue}
+            label={nutrition.centerLabel}
+            detail={nutrition.centerDetail}
+            segments={nutritionRingSegments(data, view)}
+          />
           {view === "weekly" && (
             <div className="weekly-chart" aria-label="Calories logged each day this week">
               {weekDays.map((day, index) => (
@@ -210,7 +203,7 @@ export function DashboardPage({
               </span>
               <strong className="summary-value">{macro.text}</strong>
               <span className="summary-progress">
-                <i style={{ width: `${macro.percent}%` }} />
+                <i style={{ width: `${macro.percent}%`, background: `var(--macro-${macro.color})` }} />
               </span>
             </button>
           ))}

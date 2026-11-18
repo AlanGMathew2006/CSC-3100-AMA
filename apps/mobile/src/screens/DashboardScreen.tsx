@@ -8,7 +8,9 @@ import {
   maxDailyCalories,
   money,
   nutritionHeading,
+  nutritionRingSegments,
   nutritionView,
+  ringLegendText,
   recommendationEntries,
   recommendationLog,
   weeklyBarPercent,
@@ -60,6 +62,7 @@ export function DashboardScreen({
   const [selectedNutrient, setSelectedNutrient] = useState<NutrientKey | null>(null);
 
   const nutrition = nutritionView(data, view);
+  const ringSegments = nutritionRingSegments(data, view);
   const { caloriesGoal, macros } = nutrition;
   const dollars = diningDollarsView(data, preferences.data);
   const name = userDisplayName(data?.profile, user);
@@ -140,13 +143,13 @@ export function DashboardScreen({
             value={nutrition.centerValue}
             label={nutrition.centerLabel}
             detail={nutrition.centerDetail}
-            percent={nutrition.caloriesPercent}
+            segments={ringSegments}
           />
           <View style={styles.legend}>
-            {macros.map((macro) => (
-              <View key={macro.key} style={styles.legendItem}>
-                <View style={[styles.dot, { backgroundColor: palette.legend[macro.color] }]} />
-                <Text style={styles.legendText}>{macro.label}</Text>
+            {ringSegments.map((segment) => (
+              <View key={segment.key} style={styles.legendItem}>
+                <View style={[styles.dot, { backgroundColor: palette.legend[segment.key] }]} />
+                <Text style={styles.legendText}>{ringLegendText(segment)}</Text>
               </View>
             ))}
           </View>
@@ -194,7 +197,12 @@ export function DashboardScreen({
               {macro.text}
             </Text>
             <View style={styles.summaryProgress}>
-              <View style={[styles.summaryFill, { width: `${macro.percent}%` }]} />
+              <View
+                style={[
+                  styles.summaryFill,
+                  { width: `${macro.percent}%`, backgroundColor: palette.legend[macro.color] },
+                ]}
+              />
             </View>
           </Pressable>
         ))}
@@ -403,7 +411,7 @@ const makeStyles = (p: Palette) => {
     summaryTitleText: { flexShrink: 1, fontSize: 9, fontWeight: "700", color: p.heading },
     summaryValue: { fontSize: 9, fontWeight: "700", color: p.heading },
     summaryProgress: { height: 4, overflow: "hidden", borderRadius: 999, backgroundColor: p.summaryTrack },
-    summaryFill: { height: "100%", borderRadius: 999, backgroundColor: p.summaryFill },
+    summaryFill: { height: "100%", borderRadius: 999 },
     dollarsCard: {
       padding: 14,
       borderWidth: 1,

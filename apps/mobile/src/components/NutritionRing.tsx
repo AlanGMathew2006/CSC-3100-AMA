@@ -1,3 +1,4 @@
+import { ringArcs, type RingSegment } from "@csc-3100-ama/shared";
 import { StyleSheet, View } from "react-native";
 import Svg, { Circle } from "react-native-svg";
 import { useStyles, useTheme, type Palette } from "../theme";
@@ -6,27 +7,25 @@ import { Text } from "./Text";
 const SIZE = 104; // .nutrition-chart is 104x104
 const STROKE = 6;
 
-// The calorie ring: a gray disc (the web's #f0f1f2 chart face) with an arc around its edge for
-// how much of the calorie goal has been eaten, and the number, caption and detail in the middle.
-// The web draws the same disc and text but its arc is hidden behind the disc, so there the ring
-// never shows progress; here it does.
+// The calorie ring: a gray disc (the web's #f0f1f2 chart face) with one arc per macro (protein,
+// carbs, fat, in that order from 12 o'clock) around its edge, and the number, caption and detail
+// in the middle. The rest of the ring stays gray.
 export function NutritionRing({
   value,
   label,
   detail,
-  percent,
+  segments,
 }: {
   value: string;
   label: string;
   detail: string;
-  // 0-100
-  percent: number;
+  segments: RingSegment[];
 }) {
   const styles = useStyles(makeStyles);
   const { palette } = useTheme();
   const radius = (SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
-  const filled = (Math.max(0, Math.min(percent, 100)) / 100) * circumference;
+  const arcs = ringArcs(segments, radius, STROKE);
 
   return (
     <View
@@ -35,19 +34,22 @@ export function NutritionRing({
       accessibilityLabel={`Nutrition summary. ${value} ${label}. ${detail}`}>
       <Svg width={SIZE} height={SIZE} style={StyleSheet.absoluteFill}>
         <Circle cx={SIZE / 2} cy={SIZE / 2} r={SIZE / 2} fill={palette.track} />
-        {filled > 0 && (
+        {arcs.map((arc) => (
           <Circle
+            key={arc.key}
+            testID={`ring-segment-${arc.key}`}
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={radius}
             fill="none"
-            stroke={palette.ringArc}
+            stroke={palette.legend[arc.key]}
             strokeWidth={STROKE}
             strokeLinecap="round"
-            strokeDasharray={`${filled} ${circumference}`}
+            strokeDasharray={`${arc.dash} ${circumference}`}
+            strokeDashoffset={arc.offset}
             transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
           />
-        )}
+        ))}
       </Svg>
       <View style={styles.center}>
         <Text style={styles.value} maxFontSizeMultiplier={1.15} adjustsFontSizeToFit numberOfLines={1}>
