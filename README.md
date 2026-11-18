@@ -7,7 +7,7 @@ get meal recommendations. Requirements live in
 ```
 apps/
   web/                # React + Vite + TypeScript client
-  mobile/             # Expo + React Native iOS client (phase 1: auth + API client)
+  mobile/             # Expo + React Native iOS client (phase 2: core screens)
 packages/
   express-backend/    # Express + TypeScript API (Supabase Auth + Postgres)
     supabase/schema.sql   # tables, triggers, RLS policies
@@ -98,10 +98,11 @@ service-role key.
 
 A native iOS client built with Expo and React Native. It talks to the
 same Express API and Supabase project as the web app and reuses the
-types and sign-up rules in `packages/shared`. Phase 1 has Welcome,
-Log in and Sign up screens and one signed-in screen that shows your
-email, whether onboarding is done, and a few recommendations. The
-web app is not affected.
+types, formatting and recommendation helpers in `packages/shared`.
+Phase 2 has the core screens, styled like the web app: Welcome, Log in,
+Sign up, onboarding, Home (dashboard and recommendations), the
+recommended meal detail and Profile. Explore and Saved are tabs that say
+they come in the next phase.
 
 1. Install **Expo Go** from the App Store on your iPhone.
 2. Install dependencies from the repository root with `npm install`.
