@@ -7,7 +7,7 @@ import { AuthPage } from "./src/components/AuthLayout";
 import { Helper } from "./src/components/FormFields";
 import { LoadingPage } from "./src/components/LoadingPage";
 import { MISSING_CONFIG_MESSAGE, supabaseConfig } from "./src/config";
-import { HomeScreen } from "./src/screens/HomeScreen";
+import { SignedInApp } from "./src/SignedInApp";
 import { LoginScreen } from "./src/screens/LoginScreen";
 import { SignupScreen } from "./src/screens/SignupScreen";
 import { WelcomeScreen } from "./src/screens/WelcomeScreen";
@@ -30,7 +30,7 @@ function Root() {
     if (!session) setMode("light");
   }, [session, setMode]);
   if (loading) return <LoadingPage />;
-  return session ? <HomeScreen /> : <AuthFlow />;
+  return session ? <SignedInApp /> : <AuthFlow />;
 }
 
 function Status() {
