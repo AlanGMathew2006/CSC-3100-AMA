@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
+import { AvoidancePicker } from "../../components/AvoidancePicker";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
-import { completeOnboarding, fetchLocations } from "../../lib/api";
+import { completeOnboarding, fetchLocations, updatePreferences } from "../../lib/api";
 import { errorMessage } from "../../lib/errors";
 import type { DiningLocation } from "../../types/dashboard";
 
@@ -44,6 +45,8 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
   const [nutritionPriorities, setNutritionPriorities] = useState<string[]>([]);
   const [dietaryRestrictions, setDietaryRestrictions] = useState<string[]>([]);
   const [preferredLocations, setPreferredLocations] = useState<string[]>([]);
+  const [allergens, setAllergens] = useState<string[]>([]);
+  const [excludedFoods, setExcludedFoods] = useState<string[]>([]);
 
   const loadLocations = useCallback(() => {
     setLocationError("");
@@ -92,6 +95,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         dietary_restrictions: dietaryRestrictions,
         preferred_location_ids: preferredLocations,
       });
+      // The onboarding endpoint doesn't take these, so they go through the preferences endpoint.
+      if (allergens.length > 0 || excludedFoods.length > 0) {
+        try {
+          await updatePreferences({ allergens, excluded_foods: excludedFoods });
+        } catch {
+          setError("Your plan was saved, but we couldn't save your allergens and avoided foods. Try again.");
+          return;
+        }
+      }
       onComplete();
     } catch (err) {
       setError(errorMessage(err));
@@ -167,6 +179,13 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               <p className="field-helper">{HALAL_FRIENDLY_NOTE}</p>
             )}
           </fieldset>
+
+          <AvoidancePicker
+            allergens={allergens}
+            excludedFoods={excludedFoods}
+            onAllergensChange={setAllergens}
+            onExcludedFoodsChange={setExcludedFoods}
+          />
 
           <fieldset className="choice-group">
             <legend>Preferred Dining Locations</legend>
