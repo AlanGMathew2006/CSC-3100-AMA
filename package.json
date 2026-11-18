@@ -10,9 +10,13 @@
     "format": "prettier --write './**/*.{js,jsx,ts,tsx,css,md,json}' --config ./.prettierrc",
     "dev": "concurrently -k -n web,api \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=packages/express-backend\"",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
-    "test": "npm run test --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "apply:fill-in": "npm run apply:fill-in --workspace=packages/express-backend --"
+    "test": "npm run test --workspace=apps/web --workspace=packages/shared --workspace=packages/express-backend --if-present",
+    "lint": "npm run lint --workspace=apps/web --workspace=packages/shared --workspace=packages/express-backend --if-present",
+    "apply:fill-in": "npm run apply:fill-in --workspace=packages/express-backend --",
+    "mobile": "npm run start --workspace=apps/mobile",
+    "typecheck:mobile": "npm run build --workspace=packages/shared && npm run typecheck --workspace=apps/mobile",
+    "lint:mobile": "npm run lint --workspace=apps/mobile",
+    "test:mobile": "npm run build --workspace=packages/shared && npm run test --workspace=apps/mobile"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

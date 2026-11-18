@@ -7,6 +7,7 @@ get meal recommendations. Requirements live in
 ```
 apps/
   web/                # React + Vite + TypeScript client
+  mobile/             # Expo + React Native iOS client (phase 1: auth + API client)
 packages/
   express-backend/    # Express + TypeScript API (Supabase Auth + Postgres)
     supabase/schema.sql   # tables, triggers, RLS policies
@@ -92,6 +93,43 @@ both. This makes the app available on the local network; sharing
 it over the public internet requires deploying it or using a
 secure tunnel. Never commit `.env` files or a Supabase
 service-role key.
+
+## Mobile app (apps/mobile)
+
+A native iOS client built with Expo and React Native. It talks to the
+same Express API and Supabase project as the web app and reuses the
+types and sign-up rules in `packages/shared`. Phase 1 has Welcome,
+Log in and Sign up screens and one signed-in screen that shows your
+email, whether onboarding is done, and a few recommendations. The
+web app is not affected.
+
+1. Install **Expo Go** from the App Store on your iPhone.
+2. Install dependencies from the repository root with `npm install`.
+3. Copy `apps/mobile/.env.example` to `apps/mobile/.env` and fill in
+   the three values (`EXPO_PUBLIC_API_URL`,
+   `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`). Use
+   the same Supabase values as `apps/web/.env.local`.
+4. Start the API from the repository root:
+   `npm run dev --workspace=packages/express-backend`.
+5. Build the shared package once (`npm run build --workspace=packages/shared`),
+   then start Expo with `npm run start --workspace=apps/mobile` (or
+   `npm run mobile`).
+6. Scan the QR code with the iPhone camera and open it in Expo Go. The
+   phone and the computer must be on the same Wi-Fi network.
+
+On a phone, `localhost` is the phone itself, so `EXPO_PUBLIC_API_URL`
+must be this computer's LAN IP address, for example
+`http://192.168.1.20:8000` (find it with `ipconfig getifaddr en0` on
+macOS). This is needed until the backend is deployed (#23). If the
+phone can't reach the API, check that the firewall allows incoming
+connections on port 8000. Restart Expo after changing `.env`.
+
+Checks: `npm run typecheck:mobile`, `npm run lint:mobile` and
+`npm run test:mobile` from the repository root (the root `npm test`
+and `npm run lint` only cover the web app, the API and the shared
+package). `npx expo export --platform ios` in `apps/mobile` checks
+that the app bundles. Email confirmation links and Google sign-in are
+not supported on mobile yet (deep links are planned for phase 4).
 
 # Authentication Sequence Diagram 
 

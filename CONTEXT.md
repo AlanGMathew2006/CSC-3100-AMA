@@ -96,14 +96,27 @@ Confirmed decisions:
   missing price says "Free with a meal", "Combo only" or "Price
   unavailable" (priceText in lib/mealLog.ts).
 
-# Future native-mobile direction
+# Native-mobile direction
 
-If the team later adopts native mobile, create a separate
-Expo/React Native client at apps/mobile. Do not replace or
-silently convert the Vite web app. The two clients may share
-TypeScript types, API contracts, recommendation logic, and the
-same Supabase backend, but React web UI components and CSS must
-be rewritten with React Native components and styles.
+The native iOS client is a separate Expo/React Native app at
+apps/mobile (phase 1: setup, auth, API client and a smoke screen).
+Do not replace or silently convert the Vite web app. The two
+clients share TypeScript types, API contracts, the password
+rules (packages/shared) and the same Supabase backend, but React
+web UI components and CSS must be rewritten with React Native
+components and styles.
+
+- Expo pins its own React (19) and React Native; the web app stays
+  on React 18. npm keeps the two copies apart (each app has its own
+  node_modules/react), so do not add `overrides` for react at the
+  root and run `npm ls react` after adding mobile dependencies.
+  Install mobile packages with `npx expo install` from apps/mobile.
+- Mobile checks are separate from the web ones: `npm run
+  typecheck:mobile`, `lint:mobile`, `test:mobile` at the root.
+  The root `npm test` and `npm run lint` do not run them.
+- Config comes from apps/mobile/.env (EXPO_PUBLIC_API_URL,
+  EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY). On a
+  phone the API URL must be the computer's LAN IP, not localhost.
 
 # Product and UI requirements
 
