@@ -6,6 +6,7 @@ import {
 } from "react";
 import "./App.css";
 import { useAuth } from "./auth";
+import { usePasswordRecovery } from "./passwordRecovery";
 import { BrandHeader } from "./components/BrandHeader";
 import { Toast } from "./components/Toast";
 import type { AppTab } from "./components/BottomNav";
@@ -173,11 +174,10 @@ function App() {
   const {
     session,
     loading,
-    recovering,
     emailConfirmationPending,
-    clearEmailConfirmation,
-    cancelPasswordRecovery
+    clearEmailConfirmation
   } = useAuth();
+  const { recovering, cancelPasswordRecovery } = usePasswordRecovery();
   const [screen, setScreen] = useState<Screen>("welcome");
 
   if (!isSupabaseConfigured) {

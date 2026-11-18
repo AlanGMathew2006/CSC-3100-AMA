@@ -15,11 +15,8 @@ import {
   getConfirmationRedirect,
   isEmailConfirmationLink
 } from "./lib/emailConfirmation";
-import {
-  getPasswordResetRedirect,
-  isRecoveryLink,
-  PASSWORD_RESET_PATH
-} from "./lib/recoveryLink";
+import { getPasswordResetRedirect } from "./lib/recoveryLink";
+import { unwrap } from "./lib/supabaseResult";
 import { normalizeEmail } from "./lib/validation";
 
 interface AuthContextValue {
@@ -35,12 +32,8 @@ interface AuthContextValue {
   ) => Promise<boolean>;
   signInWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  // True after the user opens a password reset email link.
-  recovering: boolean;
   emailConfirmationPending: boolean;
   clearEmailConfirmation: () => void;
-  cancelPasswordRecovery: () => void;
-  updatePassword: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -55,9 +48,6 @@ export function AuthProvider({
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(isSupabaseConfigured);
-  const [recovering, setRecovering] = useState(() =>
-    isRecoveryLink(window.location.pathname, window.location.hash)
-  );
   const [emailConfirmationPending, setEmailConfirmationPending] =
     useState(() => isEmailConfirmationLink(window.location.search));
 
@@ -84,8 +74,7 @@ export function AuthProvider({
       });
 
     const { data } = client.auth.onAuthStateChange(
-      (event, next) => {
-        if (event === "PASSWORD_RECOVERY") setRecovering(true);
+      (_event, next) => {
         if (emailConfirmationPending) return;
         setSession(next);
       }
@@ -102,15 +91,15 @@ export function AuthProvider({
       session,
       loading,
       async signIn(email, password) {
-        const { error } =
+        unwrap(
           await requireSupabase().auth.signInWithPassword({
             email: normalizeEmail(email),
             password
-          });
-        if (error) throw error;
+          })
+        );
       },
       async signUp(name, email, password) {
-        const { data, error } =
+        const data = unwrap(
           await requireSupabase().auth.signUp({
             email: normalizeEmail(email),
             password,
@@ -121,20 +110,20 @@ export function AuthProvider({
                 window.location.origin
               )
             }
-          });
-        if (error) throw error;
+          })
+        );
         return data.session !== null;
       },
       async signInWithGoogle() {
-        const { error } =
+        unwrap(
           await requireSupabase().auth.signInWithOAuth({
             provider: "google",
             options: { redirectTo: window.location.origin }
-          });
-        if (error) throw error;
+          })
+        );
       },
       async resetPassword(email) {
-        const { error } =
+        unwrap(
           await requireSupabase().auth.resetPasswordForEmail(
             normalizeEmail(email),
             {
@@ -142,32 +131,18 @@ export function AuthProvider({
                 window.location.origin
               )
             }
-          );
-        if (error) throw error;
+          )
+        );
       },
-      recovering,
       emailConfirmationPending,
       clearEmailConfirmation() {
         setEmailConfirmationPending(false);
       },
-      cancelPasswordRecovery() {
-        clearRecoveryUrl();
-        setRecovering(false);
-      },
-      async updatePassword(password) {
-        const { error } =
-          await requireSupabase().auth.updateUser({ password });
-        if (error) throw error;
-        clearRecoveryUrl();
-        setRecovering(false);
-      },
       async signOut() {
-        const { error } =
-          await requireSupabase().auth.signOut();
-        if (error) throw error;
+        unwrap(await requireSupabase().auth.signOut());
       }
     }),
-    [session, loading, recovering, emailConfirmationPending]
+    [session, loading, emailConfirmationPending]
   );
 
   return (
@@ -175,12 +150,6 @@ export function AuthProvider({
       {children}
     </AuthContext.Provider>
   );
-}
-
-function clearRecoveryUrl(): void {
-  if (window.location.pathname === PASSWORD_RESET_PATH) {
-    window.history.replaceState(null, "", `${window.location.origin}/`);
-  }
 }
 
 export function useAuth(): AuthContextValue {
