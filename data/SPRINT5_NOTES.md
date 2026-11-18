@@ -159,10 +159,10 @@ C (iOS)
 
 D (SRD)
 
-- Kept all existing headings, including the odd numbering (two sections 5, 6 and 7 mixed up with the table of contents) and the TOC line "Database schema (MySQL)". The database is PostgreSQL (Supabase); the data section says so. You may want to fix that heading yourself.
+- Kept all existing headings, including the odd numbering (sections 5, 6 and 7 do not match the table of contents). The TOC line "Database schema (MySQL)" was changed to PostgreSQL in the follow-up commit (Task F).
 - Traceability uses names, not line numbers. The column title is still "LINE OF CODE".
 - I added a row to the document history (2026-11-17, Aarav Babel).
-- US-08: the web UI offers dietary restrictions (vegetarian, vegan, halal-friendly, gluten-free, no seafood) in onboarding and profile. The `allergens` and `excluded_foods` fields exist in the API and are enforced by the optimizer, but I did not find a screen to edit them; the SRD only describes what the code does.
+- US-08: when I wrote the SRD the web UI only had dietary restrictions; the allergen and avoided-food screens came with Task F (branch `sprint5/allergen-preferences`) and the SRD row was updated to point at them (merge F before or together with D so the SRD matches the code).
 - US-05: the web Explore tab filters by location; the dashboard recommendations use `limit` only. The API also supports `location_id`.
 - Section 8 uses only the facts from the prompt. "Other team members: TODO" appears twice (once under models, once under prompts).
 - Wireframes: the repo images are icons and photos, not wireframes, so the heading says "See screenshots in the presentation."
@@ -184,7 +184,7 @@ Try the iOS app on your iPhone (Expo Go)
 Other
 
 - Read SRD section 8 before the PR, and ask the teammates to fill their own "Other team members" lines. Also check the "Frontend/Backend" cells in the matrix; they are from the code, not from running it.
-- Merge order: A, then B (retarget to main). C and D can go in any order. C is the only branch that changes `package.json`, `package-lock.json`, `packages/shared`, `apps/web/src/lib/validation.ts` and `apps/web/src/types/dashboard.ts`; A and B change other web files, so there should be no conflicts.
+- Merge order (updated in the follow-up): **A, B, D, F, then rebase C on main last** (see section 7). The old line follows for reference. A, then B (retarget to main). C and D can go in any order. C is the only branch that changes `package.json`, `package-lock.json`, `packages/shared`, `apps/web/src/lib/validation.ts` and `apps/web/src/types/dashboard.ts`; A and B change other web files, so there should be no conflicts.
 - Fill in the issue numbers in the PR text for C and D.
 - Supabase: if you want the sign-up confirmation email on the phone to open something sensible, check the project's Site URL (phase 4 adds deep links).
 - Nothing was pushed. Run `git push` for each branch yourself when you are ready.
@@ -205,3 +205,45 @@ Other
 3. Grow the API client (`apps/mobile/src/lib/apiClient.ts`) to the other endpoints, and move the shared bits (`authErrors.ts`, `format.ts`, request types from `apps/web/src/types/dashboard.ts`) into `packages/shared` so web and mobile do not drift.
 4. Real styling/theme and dark mode, and decide on SecureStore for the session.
 5. Test on a real device first (see section 4), and fix whatever that shows.
+
+## 7. Follow-up: Tasks E and F
+
+### Task E: Docker builds on `sprint5/expo-setup`
+
+- Commit `23e71ee` Keep Docker builds working with the mobile workspace.
+- **Reproduced with real builds** (Docker is running here): `docker build -f Dockerfile.backend .` and `docker build -f Dockerfile .` both **succeeded** on the branch before any change. So `npm ci` did not fail, and the Expo dependencies were **not** installed (no `node_modules/expo` in the API image), because the Dockerfiles do not copy `apps/mobile/package.json`; npm ci simply ignores the missing workspace.
+- The real problem I found: `.dockerignore` only had `node_modules` and `dist` at the repository root, so `COPY . .` copied the whole `apps/mobile` folder, including its host `node_modules`, into both images (158 MB in the API image). Host `node_modules` and `dist` folders in other workspaces were also being sent.
+- Fix (only `.dockerignore`, Dockerfiles unchanged): ignore `**/node_modules`, `**/dist` and `apps/mobile`. I chose this over `--workspace` flags because `npm ci` already works without the mobile package.json and the change is smaller.
+- Verified: rebuilt both images with `--no-cache` after the change. Both built; the API image has only `apps/web` and no `expo` package; `packages/express-backend/dist/backend.js` is there; the web image serves `index.html`. `docker compose config -q` still parses. I did not run `docker compose up` (needs real Supabase values). Test images were removed afterwards.
+- Full checks on the branch (build, lint, test, backend typecheck, mobile typecheck, lint, test) pass.
+
+### Task F: allergens and avoided foods in the web UI (`sprint5/allergen-preferences`, off main)
+
+- Commit `0dc320d` Let students set allergens and avoided foods. The SRD follow-up is `862f140` on `sprint5/srd`.
+- What I found: `user_preferences` already has `allergens text[]` and `excluded_foods text[]`; `PUT /api/preferences` saves both (strings up to 100 characters); `isMealAllowed` in `packages/shared/src/dietary.ts` filters on them in the recommendation service, and meals without verified allergen data are hidden whenever an allergen is set ("Allergen info unavailable"). Excluded foods match when the meal name contains the word. **No schema, backend or shared change was needed.**
+- Added `components/AvoidancePicker.tsx` (allergen chips for milk, egg, wheat, soy, peanut, tree nuts, fish, shellfish, sesame using the existing `allergenLabel`; foods to avoid with an Add button, Enter key, duplicate check, and click-to-remove chips) and used it in OnboardingPage and ProfilePage. Same chip look as the dietary options (existing `choice-chip` classes; about 14 lines of new CSS for the add row). No change to MealCard, BottomNav or BrandHeader.
+- Decisions: the onboarding RPC (`complete_onboarding_with_preferences`) does not take allergens, and changing it would need a migration, so onboarding calls `PUT /api/preferences` right after `completeOnboarding`, only when something was selected. If that second call fails, the page stays with the message "Your plan was saved, but we couldn't save your allergens and avoided foods. Try again." (retrying repeats both calls) so a student never ends up believing an allergen is saved when it is not. Stored allergens are codes (`tree_nut`); older free-text values like "Dairy" still show as selected for their code (via `normalizeAllergen`) and unknown values are kept untouched.
+- Dashboard: recommendations are fetched when the Dashboard page mounts, and switching tabs remounts it, so saving on Profile and going back to Home shows the filtered results. `onProfileChanged` also reloads the profile. I did not change the Dashboard code. The unverified-allergen behavior is the existing server rule, plus a note under the allergen chips ("Meals without verified allergen information are hidden while an allergen is selected").
+- Tests (Vitest + testing-library, API mocked): 9 new (`ProfilePage.allergens.test.tsx` 6, `OnboardingPage.allergens.test.tsx` 3): labels, loading existing values (including "Dairy" as milk), selecting and saving, add/remove/duplicates, the verified-info note, save failure on Profile and on onboarding. Web tests 78 → 87; backend 79 and shared 49 unchanged. `npm run test:e2e` passes (6/6).
+- Not verified: the screens in a real browser against the real API (only jsdom tests and the stubbed Playwright smoke test).
+
+**PR title:** Let students set allergens and avoided foods
+
+**PR description:**
+
+Part of #<allergen issue number>
+
+The API, data and recommendation service already supported allergens and avoided foods (US-08 / FR-08), but no screen let a student set them.
+
+- New `AvoidancePicker` component: allergen chips (milk, egg, wheat, soy, peanut, tree nuts, fish, shellfish, sesame) and a list of foods to avoid that can be added and removed. It uses the existing chip styles.
+- Used in onboarding and on the Profile page. Profile saves through `PUT /api/preferences` with the other preferences. Onboarding saves them with `PUT /api/preferences` right after the plan is saved (the onboarding endpoint does not take them) and shows an error if that fails.
+- No schema or backend change. Recommendations already hide meals that contain a selected allergen, and meals without verified allergen information while an allergen is selected; the screen says so.
+- Tests for selecting, loading existing values, saving and failing to save (9 new tests, web 78 to 87). Browser smoke test passes.
+
+### Updated merge order
+
+1. A `sprint5/auth-provider-refactor`
+2. B `sprint5/app-routing-refactor` (retarget to main after A)
+3. D `sprint5/srd` (its US-08 row names the new component, so merge F right after it, or together)
+4. F `sprint5/allergen-preferences`
+5. C `sprint5/expo-setup`: rebase on main last (`git rebase main sprint5/expo-setup`). It changes `package.json`, `package-lock.json`, `apps/web/src/lib/validation.ts` and `types/dashboard.ts`; F and the others do not touch those, but run `npm install` after the rebase and check the lock file. F changes `OnboardingPage.tsx`, `ProfilePage.tsx` and `App.css`, which C does not touch.
