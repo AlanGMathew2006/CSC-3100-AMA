@@ -53,7 +53,7 @@ describe("HomeScreen", () => {
     expect(screen.getByText("Onboarding: done")).toBeTruthy();
     expect(screen.getByText("Panda Bowl")).toBeTruthy();
     expect(screen.getByText("$11.50 · 812 cal · 42g protein")).toBeTruthy();
-    expect(mockedApi.fetchRecommendations).toHaveBeenCalledWith(3);
+    expect(mockedApi.fetchRecommendations).toHaveBeenCalledWith({ limit: 3 });
   });
 
   it("says 'unavailable' for a missing price or nutrition value", async () => {

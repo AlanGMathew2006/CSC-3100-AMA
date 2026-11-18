@@ -236,3 +236,37 @@ export function recommendationEntries(
 // "Today's Nutrition" / "This Week's Nutrition".
 export const nutritionHeading = (view: DashboardView) =>
   view === "daily" ? "Today's Nutrition" : "This Week's Nutrition";
+
+function localDayStart(now: Date): Date {
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+// Weeks start on Monday.
+function localWeekStart(now: Date): Date {
+  const start = localDayStart(now);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  return start;
+}
+
+// Query string for GET /api/dashboard: the start of today and of this week in the device's time zone.
+export function dashboardQuery(now: Date = new Date()): string {
+  return (
+    `?day_start=${encodeURIComponent(localDayStart(now).toISOString())}` +
+    `&week_start=${encodeURIComponent(localWeekStart(now).toISOString())}`
+  );
+}
+
+export interface RecommendationParams {
+  limit?: number;
+  locationId?: string;
+  mealsRemaining?: number;
+}
+
+// Query string for GET /api/recommendations and GET /api/meal-targets.
+export function recommendationQuery({ limit, locationId, mealsRemaining }: RecommendationParams): string {
+  const parts: string[] = [];
+  if (limit != null) parts.push(`limit=${encodeURIComponent(String(limit))}`);
+  if (locationId) parts.push(`location_id=${encodeURIComponent(locationId)}`);
+  if (mealsRemaining != null) parts.push(`meals_remaining=${encodeURIComponent(String(mealsRemaining))}`);
+  return parts.length ? `?${parts.join("&")}` : "";
+}

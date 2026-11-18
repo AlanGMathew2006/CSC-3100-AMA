@@ -119,3 +119,4 @@ export * from "./menu.js";
 export * from "./onboarding.js";
 export * from "./recommendation-helpers.js";
 export * from "./serving.js";
+export * from "./auth-errors.js";

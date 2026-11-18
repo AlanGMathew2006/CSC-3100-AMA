@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { Body, Button, ErrorText, LoadingScreen, Screen, Title } from "../components/ui";
 import { api } from "../lib/api";
 import { formatAmount, formatPrice } from "../lib/format";
-import { colors } from "../theme";
+import { light as colors } from "../theme";
 
 const RECOMMENDATION_COUNT = 3;
 
@@ -34,7 +34,7 @@ export function HomeScreen() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.fetchProfile(), api.fetchRecommendations(RECOMMENDATION_COUNT)])
+    Promise.all([api.fetchProfile(), api.fetchRecommendations({ limit: RECOMMENDATION_COUNT })])
       .then(([profile, recommendations]) => {
         if (!active) return;
         setData({ profile, recommendations });

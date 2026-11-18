@@ -10,7 +10,10 @@ import {
   View,
   type TextInputProps,
 } from "react-native";
-import { colors } from "../theme";
+import { light } from "../theme";
+
+// Phase 1 building blocks, used only by the temporary signed-in screen until the dashboard replaces it.
+const colors = { ...light, background: light.surface, border: "#cfd8d3", muted: "#5d6865", text: "#18211d" };
 
 // Small building blocks for the phase 1 screens. Real design work is phase 2.
 

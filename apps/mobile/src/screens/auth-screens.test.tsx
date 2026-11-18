@@ -53,7 +53,7 @@ describe("LoginScreen", () => {
   it("links to sign up", async () => {
     const onCreateAccount = jest.fn();
     await render(<LoginScreen onCreateAccount={onCreateAccount} />);
-    await fireEvent.press(screen.getByRole("button", { name: "Create an account" }));
+    await fireEvent.press(screen.getByRole("link", { name: "Create an account" }));
     expect(onCreateAccount).toHaveBeenCalled();
   });
 });

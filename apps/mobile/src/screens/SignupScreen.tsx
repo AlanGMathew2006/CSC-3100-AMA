@@ -1,10 +1,22 @@
-import { PASSWORD_HINT, normalizeEmail, validateSignup, type SignupField } from "@csc-3100-ama/shared";
+import {
+  PASSWORD_HINT,
+  authErrorMessage,
+  normalizeEmail,
+  validateSignup,
+  type SignupField,
+} from "@csc-3100-ama/shared";
 import { useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { useAuth } from "../auth/AuthProvider";
-import { Body, Button, ErrorText, Field, Screen, Title } from "../components/ui";
-import { authErrorMessage } from "../lib/authErrors";
+import { AuthPage, IntroBlock } from "../components/AuthLayout";
+import { Field, FormMessage, LinkText, PrimaryButton } from "../components/FormFields";
+import { Text } from "../components/Text";
+import { useStyles } from "../theme";
 
+// SignupPage on the web, without the Google button (phase 4). Opening the confirmation link
+// from the phone is phase 4 too (deep links).
 export function SignupScreen({ onLogin }: { onLogin: () => void }) {
+  const styles = useStyles(makeStyles);
   const { signUp } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,57 +51,89 @@ export function SignupScreen({ onLogin }: { onLogin: () => void }) {
     }
   }
 
-  // Same message as the web app. Opening the link from the phone is phase 4 (deep links).
   if (confirmationSent) {
     return (
-      <Screen>
-        <Title>Check your email to confirm your account</Title>
-        <Body>
+      <AuthPage>
+        <IntroBlock title="Check your email to confirm your account">
           We sent a confirmation link to {normalizeEmail(email)}. Open it to finish creating your
           account, then log in.
-        </Body>
-        <Button label="Go to log in" onPress={onLogin} />
-      </Screen>
+        </IntroBlock>
+        <View style={styles.actions}>
+          <PrimaryButton label="Go to log in" onPress={onLogin} />
+        </View>
+      </AuthPage>
     );
   }
 
   return (
-    <Screen>
-      <Title>Create your account</Title>
-      <Field label="Name" value={name} onChangeText={setName} autoComplete="name" invalid={errorField === "name"} />
-      <Field
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoComplete="email"
-        keyboardType="email-address"
-        invalid={errorField === "email"}
-      />
-      <Field
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        autoComplete="new-password"
-        invalid={errorField === "password"}
-      />
-      <Body>{PASSWORD_HINT}</Body>
-      <Field
-        label="Confirm password"
-        value={confirm}
-        onChangeText={setConfirm}
-        secureTextEntry
-        autoComplete="new-password"
-        invalid={errorField === "confirm"}
-      />
-      {error ? <ErrorText>{error}</ErrorText> : null}
-      <Button
-        label={submitting ? "Creating account…" : "Create account"}
-        onPress={() => void handleSubmit()}
-        disabled={submitting}
-      />
-      <Button label="Log in" variant="link" onPress={onLogin} />
-    </Screen>
+    <AuthPage gap={22}>
+      <IntroBlock title="Create your account">Start making the most of your Dining Dollars.</IntroBlock>
+
+      <View style={styles.stack}>
+        <Field
+          label="Name"
+          value={name}
+          onChangeText={setName}
+          autoComplete="name"
+          textContentType="name"
+          invalid={errorField === "name"}
+        />
+        <Field
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
+          invalid={errorField === "email"}
+        />
+        <Field
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          password
+          autoComplete="new-password"
+          textContentType="newPassword"
+          helper={PASSWORD_HINT}
+          invalid={errorField === "password"}
+        />
+        <Field
+          label="Confirm password"
+          value={confirm}
+          onChangeText={setConfirm}
+          password
+          autoComplete="new-password"
+          textContentType="newPassword"
+          invalid={errorField === "confirm"}
+        />
+        <FormMessage error={error} />
+      </View>
+
+      {/* On the web these two are buttons that go nowhere yet; the pages don't exist. */}
+      <Text style={styles.terms}>
+        By creating an account, you agree to our <LinkText label="Terms of use" /> and acknowledge
+        our <LinkText label="Privacy policy" />.
+      </Text>
+
+      <View style={styles.actions}>
+        <PrimaryButton
+          label={submitting ? "Creating account…" : "Create account"}
+          onPress={() => void handleSubmit()}
+          disabled={submitting}
+        />
+      </View>
+
+      <Text style={styles.switchCopy}>
+        Already have an account? <LinkText label="Log in" onPress={onLogin} />
+      </Text>
+    </AuthPage>
   );
 }
+
+const makeStyles = () =>
+  StyleSheet.create({
+    stack: { gap: 16 },
+    actions: { gap: 18 },
+    terms: { fontSize: 12, lineHeight: 18, color: "#5d6865" },
+    switchCopy: { fontSize: 13, lineHeight: 18, textAlign: "center", color: "#5d6865" },
+  });

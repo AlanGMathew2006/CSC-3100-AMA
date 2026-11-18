@@ -4,7 +4,7 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
 import { GoogleButton } from "../../components/GoogleButton";
 import { useGoogleSignIn } from "../../hooks/useGoogleSignIn";
-import { authErrorMessage, isInvalidCredentials } from "../../lib/authErrors";
+import { authErrorMessage, isInvalidCredentials } from "@csc-3100-ama/shared";
 import { isValidEmail, normalizeEmail } from "../../lib/validation";
 
 type LoginPageProps = {
