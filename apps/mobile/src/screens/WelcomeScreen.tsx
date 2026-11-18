@@ -1,4 +1,4 @@
-import { Image, StyleSheet, View } from "react-native";
+import { Image, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Page } from "../components/Page";
 import { PrimaryButton } from "../components/FormFields";
 import { Text } from "../components/Text";
@@ -13,12 +13,15 @@ export function WelcomeScreen({
   onSignIn: () => void;
 }) {
   const styles = useStyles(makeStyles);
+  // The picture fills the width inside the 24px side padding, keeping its 1152x928 shape.
+  const { width } = useWindowDimensions();
+  const imageWidth = width - 48;
   return (
     <Page contentStyle={styles.content}>
       <View style={styles.hero}>
         <Image
           source={require("../../assets/images/campus-illustration.jpg")}
-          style={styles.image}
+          style={[styles.image, { width: imageWidth, height: (imageWidth * 928) / 1152 }]}
           accessibilityLabel="Illustration of a campus with winding paths, dining spots, and gardens"
         />
       </View>
@@ -56,7 +59,7 @@ const makeStyles = (p: Palette) =>
   StyleSheet.create({
     content: { paddingBottom: 20 },
     hero: { paddingTop: 24, paddingHorizontal: 24 },
-    image: { width: "100%", aspectRatio: 1152 / 928, borderRadius: radii.welcomeImage },
+    image: { borderRadius: radii.welcomeImage },
     body: { gap: 32, padding: 28 },
     copy: { gap: 12 },
     title: { fontSize: 32, lineHeight: 40, fontWeight: "800", color: p.heading },

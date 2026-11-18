@@ -74,7 +74,7 @@ export function Field({
           </Pressable>
         )}
       </View>
-      {helper ? <Text style={styles.helper}>{helper}</Text> : null}
+      {helper ? <Text style={[styles.helper, styles.mutedText]}>{helper}</Text> : null}
     </View>
   );
 }
