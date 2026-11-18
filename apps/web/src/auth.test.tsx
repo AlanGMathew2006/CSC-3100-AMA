@@ -3,25 +3,13 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "@supabase/supabase-js";
 
-// Characterization tests: they describe how AuthProvider behaves today so the
+// Characterization tests: they describe how AuthProvider behaves so the
 // refactor can be checked against them. The Supabase client module is mocked,
-// nothing touches the network.
-const mockAuth = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  onAuthStateChange: vi.fn(),
-  signInWithPassword: vi.fn(),
-  signUp: vi.fn(),
-  signInWithOAuth: vi.fn(),
-  resetPasswordForEmail: vi.fn(),
-  updateUser: vi.fn(),
-  signOut: vi.fn(),
-}));
+// nothing touches the network. Password recovery has its own file
+// (passwordRecovery.test.tsx).
+vi.mock("./lib/supabase", async () => (await import("./test/mockSupabase")).supabaseModuleMock);
 
-vi.mock("./lib/supabase", () => ({
-  isSupabaseConfigured: true,
-  requireSupabase: () => ({ auth: mockAuth }),
-}));
-
+import { mockAuth } from "./test/mockSupabase";
 import { AuthProvider, useAuth } from "./auth";
 
 type AuthListener = (event: string, session: Session | null) => void;
@@ -214,59 +202,6 @@ describe("AuthProvider resetPassword", () => {
     mockAuth.resetPasswordForEmail.mockResolvedValue({ data: {}, error });
     const { result } = await renderAuth();
     await expect(result.current.resetPassword("a@b.co")).rejects.toBe(error);
-  });
-});
-
-describe("AuthProvider password recovery", () => {
-  it("is not recovering on a normal visit", async () => {
-    const { result } = await renderAuth();
-    expect(result.current.recovering).toBe(false);
-  });
-
-  it("is recovering when opened on /reset-password", async () => {
-    window.history.replaceState(null, "", "/reset-password");
-    const { result } = await renderAuth();
-    expect(result.current.recovering).toBe(true);
-  });
-
-  it("is recovering when the URL hash says type=recovery", async () => {
-    window.history.replaceState(null, "", "/#access_token=abc&type=recovery");
-    const { result } = await renderAuth();
-    expect(result.current.recovering).toBe(true);
-  });
-
-  it("starts recovering on a PASSWORD_RECOVERY auth event", async () => {
-    const { result } = await renderAuth();
-    act(() => emitAuthEvent("PASSWORD_RECOVERY", fakeSession()));
-    expect(result.current.recovering).toBe(true);
-    expect(result.current.session).not.toBeNull();
-  });
-
-  it("updatePassword saves the password, leaves recovery and clears the reset URL", async () => {
-    window.history.replaceState(null, "", "/reset-password");
-    const { result } = await renderAuth();
-    await act(() => result.current.updatePassword("a-brand-new-password"));
-    expect(mockAuth.updateUser).toHaveBeenCalledWith({ password: "a-brand-new-password" });
-    expect(result.current.recovering).toBe(false);
-    expect(window.location.pathname).toBe("/");
-  });
-
-  it("updatePassword throws the Supabase error and stays in recovery", async () => {
-    window.history.replaceState(null, "", "/reset-password");
-    const error = new Error("Password too weak");
-    mockAuth.updateUser.mockResolvedValue({ data: {}, error });
-    const { result } = await renderAuth();
-    await expect(result.current.updatePassword("short")).rejects.toBe(error);
-    expect(result.current.recovering).toBe(true);
-    expect(window.location.pathname).toBe("/reset-password");
-  });
-
-  it("cancelPasswordRecovery leaves recovery and clears the reset URL", async () => {
-    window.history.replaceState(null, "", "/reset-password");
-    const { result } = await renderAuth();
-    act(() => result.current.cancelPasswordRecovery());
-    expect(result.current.recovering).toBe(false);
-    expect(window.location.pathname).toBe("/");
   });
 });
 

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../../auth";
+import { usePasswordRecovery } from "../../passwordRecovery";
 import { BrandHeader } from "../../components/BrandHeader";
 import { Field, FormMessage } from "../../components/FormFields";
 import { authErrorMessage } from "../../lib/authErrors";
@@ -14,7 +15,8 @@ type ResetPasswordPageProps = {
 };
 
 export function ResetPasswordPage({ onBackToLogin }: ResetPasswordPageProps) {
-  const { session, updatePassword } = useAuth();
+  const { session } = useAuth();
+  const { updatePassword } = usePasswordRecovery();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
