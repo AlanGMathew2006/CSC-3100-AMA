@@ -10,10 +10,10 @@ interface LoadState<T> {
   error: string;
 }
 
-// Loads data on mount (and again on reload() or when `load` changes), keeping the last result
-// while it reloads. The same loading/error/data shape as the web hooks (useMenu,
+// Loads data on mount (and again on reload(), when `load` changes or when `refreshKey` changes),
+// keeping the last result while it reloads. The same loading/error/data shape as the web hooks (useMenu,
 // useRecommendations, ...). Pass a stable `load` (a module function or a useCallback).
-export function useLoad<T>(load: () => Promise<T>, enabled = true) {
+export function useLoad<T>(load: () => Promise<T>, enabled = true, refreshKey = 0) {
   const [state, setState] = useState<LoadState<T>>({
     data: null,
     loading: enabled,
@@ -50,7 +50,9 @@ export function useLoad<T>(load: () => Promise<T>, enabled = true) {
     return () => {
       latest.current += 1;
     };
-  }, [enabled, run]);
+    // refreshKey is only here to run the request again when it changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, run, refreshKey]);
 
   return { ...state, reload };
 }

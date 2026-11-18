@@ -4,7 +4,7 @@ import { Helper, LinkText } from "./components/FormFields";
 import { LoadingPage } from "./components/LoadingPage";
 import { useLoad } from "./hooks/useAsync";
 import { api } from "./lib/api";
-import { HomeScreen } from "./screens/HomeScreen";
+import { MainTabs } from "./navigation/MainTabs";
 import { OnboardingScreen } from "./screens/OnboardingScreen";
 
 // Only mounted while signed in, so the profile is fetched per session (SignedInApp on the web).
@@ -29,5 +29,5 @@ export function SignedInApp() {
     return <OnboardingScreen key={user?.id} onComplete={() => void profile.reload()} />;
   }
 
-  return <HomeScreen />;
+  return <MainTabs onProfileChanged={() => void profile.reload()} />;
 }

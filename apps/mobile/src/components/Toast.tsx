@@ -21,6 +21,7 @@ const ToastContext = createContext<(message: string) => void>(() => {});
 
 // Shows one message at a time above the tab bar, like the web Toast.
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const styles = useStyles(makeStyles);
   const [message, setMessage] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,8 +42,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => show, [show]);
   return (
     <ToastContext.Provider value={value}>
-      {children}
-      <ToastView message={message} />
+      <View style={styles.root}>
+        {children}
+        <ToastView message={message} />
+      </View>
     </ToastContext.Provider>
   );
 }
@@ -68,6 +71,7 @@ function ToastView({ message }: { message: string }) {
 
 const makeStyles = (p: Palette) =>
   StyleSheet.create({
+    root: { flex: 1 },
     toast: {
       position: "absolute",
       left: 16,
