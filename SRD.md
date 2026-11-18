@@ -378,7 +378,7 @@ Values that could not be checked against a source are left blank rather than gue
 
    **Aarav Babel**
 
-   - I used Claude, made by Anthropic. I used Claude chat (claude.ai) to plan sprints, break the work into GitHub issues and draft status reports. I used Claude Code in the terminal for coding.
+   - I used Claude, made by Anthropic. I used Claude chat (claude.ai) to help plan sprints and break the work into GitHub issues. I used Claude Code in the terminal for coding.
 
    - For planning in chat I used Claude Opus. For Sprints 3 and 4 I used Claude Code (Claude Opus/Sonnet). For the Sprint 5 work I used Claude Sonnet in Claude Code.
 
