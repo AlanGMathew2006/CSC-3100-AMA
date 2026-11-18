@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
+import { AvoidancePicker } from "../../components/AvoidancePicker";
 import { BrandHeader } from "../../components/BrandHeader";
 import { errorMessage } from "../../lib/errors";
 import { fetchPreferences, updatePreferences, updateProfile } from "../../lib/api";
@@ -186,6 +187,15 @@ export function ProfilePage({
                 <p className="field-helper">{HALAL_FRIENDLY_NOTE}</p>
               )}
             </fieldset>
+
+            <AvoidancePicker
+              allergens={preferences.allergens}
+              excludedFoods={preferences.excluded_foods}
+              onAllergensChange={(allergens) => setPreferences((current) => ({ ...current, allergens }))}
+              onExcludedFoodsChange={(excluded_foods) =>
+                setPreferences((current) => ({ ...current, excluded_foods }))
+              }
+            />
 
             <section className="profile-setting-section">
               <h2>Settings</h2>

@@ -3198,3 +3198,17 @@ html[data-theme="dark"] .empty-card .link-button {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+.avoid-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.avoid-add-row .input-control {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #c5b783;
+  border-radius: 11px;
+}
