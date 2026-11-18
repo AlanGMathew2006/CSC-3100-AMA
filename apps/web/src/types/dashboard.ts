@@ -1,10 +1,6 @@
-export interface Profile {
-  id: string;
-  display_name: string | null;
-  dining_dollars_balance: number;
-  daily_spending_target: number | null;
-  onboarding_completed: boolean;
-}
+import type { Profile } from "@csc-3100-ama/shared";
+
+export type { Profile };
 
 export interface Goals {
   calories: number | null;

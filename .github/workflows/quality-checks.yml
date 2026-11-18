@@ -46,3 +46,33 @@ jobs:
         env:
           VITE_SUPABASE_URL: https://example.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: ci-placeholder-not-a-secret
+
+  mobile:
+    name: Mobile (typecheck, lint, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared package
+        run: npm run build --workspace=packages/shared
+
+      - name: Typecheck
+        run: npm run typecheck --workspace=apps/mobile
+
+      - name: Lint
+        run: npm run lint --workspace=apps/mobile
+
+      - name: Test
+        run: npm run test --workspace=apps/mobile

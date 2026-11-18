@@ -1,7 +1,12 @@
 node_modules
+**/node_modules
 dist
+**/dist
 .git
 .env
 .env.*
 !.env.example
 npm-debug.log*
+# The iOS app is not part of the web or API images. npm ci works without it
+# (its dependencies are not installed), and it keeps the build context small.
+apps/mobile
