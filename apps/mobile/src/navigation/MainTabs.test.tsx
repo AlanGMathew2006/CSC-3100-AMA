@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import { api } from "../lib/api";
-import { DASHBOARD, MENU, PREFERENCES, RECOMMENDATIONS } from "../test/fixtures";
+import { DASHBOARD, MENU, PREFERENCES, PROFILE, RECOMMENDATIONS } from "../test/fixtures";
 import { MainTabs } from "./MainTabs";
 
 jest.mock("../lib/api", () => ({
@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe("MainTabs", () => {
   it("has Home, Explore, Saved and Profile tabs, starting on the dashboard", async () => {
-    await render(<MainTabs onProfileChanged={jest.fn()} />);
+    await render(<MainTabs profile={PROFILE} onProfileChanged={jest.fn()} />);
     for (const name of ["Home", "Explore", "Saved", "Profile"]) {
       expect(screen.getByRole("tab", { name })).toBeTruthy();
     }
@@ -38,7 +38,7 @@ describe("MainTabs", () => {
   });
 
   it("says Explore and Saved are coming in the next phase", async () => {
-    await render(<MainTabs onProfileChanged={jest.fn()} />);
+    await render(<MainTabs profile={PROFILE} onProfileChanged={jest.fn()} />);
     await fireEvent.press(screen.getByRole("tab", { name: "Explore" }));
     expect(await screen.findByText("Explore Meals")).toBeTruthy();
     expect(screen.getByText(/Explore is coming in the next phase/)).toBeTruthy();

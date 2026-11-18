@@ -29,5 +29,5 @@ export function SignedInApp() {
     return <OnboardingScreen key={user?.id} onComplete={() => void profile.reload()} />;
   }
 
-  return <MainTabs onProfileChanged={() => void profile.reload()} />;
+  return <MainTabs profile={profile.data} onProfileChanged={() => void profile.reload()} />;
 }

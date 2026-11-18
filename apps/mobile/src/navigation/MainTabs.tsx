@@ -1,4 +1,4 @@
-import type { Recommendation } from "@csc-3100-ama/shared";
+import type { Profile, Recommendation } from "@csc-3100-ama/shared";
 import { DefaultTheme, NavigationContainer, type NavigatorScreenParams } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator, type NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -74,7 +74,13 @@ function HomeStack() {
 }
 
 // The four tabs (Home, Explore, Saved, Profile) with the Home stack inside the first one.
-export function MainTabs({ onProfileChanged }: { onProfileChanged: () => void }) {
+export function MainTabs({
+  profile,
+  onProfileChanged,
+}: {
+  profile: Profile;
+  onProfileChanged: () => void;
+}) {
   const { palette } = useTheme();
   const theme = useMemo(
     () => ({ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: palette.pageBg } }),
@@ -104,7 +110,7 @@ export function MainTabs({ onProfileChanged }: { onProfileChanged: () => void })
             )}
           </Tab.Screen>
           <Tab.Screen name="Profile">
-            {() => <ProfileScreen onProfileChanged={onProfileChanged} />}
+            {() => <ProfileScreen profile={profile} onProfileChanged={onProfileChanged} />}
           </Tab.Screen>
         </Tab.Navigator>
       </NavigationContainer>
