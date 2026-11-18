@@ -8,13 +8,12 @@ import "./App.css";
 import { useAuth } from "./auth";
 import { usePasswordRecovery } from "./passwordRecovery";
 import { BrandHeader } from "./components/BrandHeader";
+import { LoadingShell } from "./components/LoadingShell";
 import { Toast } from "./components/Toast";
 import type { AppTab } from "./components/BottomNav";
 import { useProfile } from "./hooks/useProfile";
-import { EmailConfirmedPage } from "./pages/auth/EmailConfirmedPage";
-import { LoginPage } from "./pages/auth/LoginPage";
+import { AuthScreens, type AuthScreen } from "./pages/auth/AuthScreens";
 import { ResetPasswordPage } from "./pages/auth/ResetPasswordPage";
-import { SignupPage } from "./pages/auth/SignupPage";
 import { isSupabaseConfigured } from "./lib/supabase";
 import type { MenuCombo, Recommendation } from "@csc-3100-ama/shared";
 import { ComboDetailPage } from "./pages/app/ComboDetailPage";
@@ -25,13 +24,10 @@ import { OnboardingPage } from "./pages/app/OnboardingPage";
 import { ProfilePage } from "./pages/app/ProfilePage";
 import { RecommendationDetailPage } from "./pages/app/RecommendationDetailPage";
 import { SavedMealsPage } from "./pages/app/SavedMealsPage";
-import { WelcomePage } from "./pages/WelcomePage";
 
 // The shared package doesn't export a MenuItem type, so
 // derive it from the page component that consumes it.
 type MenuItem = ComponentProps<typeof MealDetailPage>["item"];
-
-type Screen = "welcome" | "login" | "signup";
 
 // Only mounted while signed in, so the profile is fetched per session.
 function SignedInApp() {
@@ -79,13 +75,7 @@ function SignedInApp() {
     setTab(returnTab);
   }
 
-  if (loading) {
-    return (
-      <div className="page-shell">
-        <BrandHeader />
-      </div>
-    );
-  }
+  if (loading) return <LoadingShell />;
 
   if (error) {
     return (
@@ -174,11 +164,18 @@ function App() {
   const {
     session,
     loading,
-    emailConfirmationPending,
-    clearEmailConfirmation
+    emailConfirmationPending
   } = useAuth();
   const { recovering, cancelPasswordRecovery } = usePasswordRecovery();
-  const [screen, setScreen] = useState<Screen>("welcome");
+  // The last auth screen the user was on, so AuthScreens can start there again
+  // after a sign out or a password reset.
+  const [authStart, setAuthStart] = useState<AuthScreen>("welcome");
+  const authScreens = (
+    <AuthScreens
+      initialScreen={authStart}
+      onScreenChange={setAuthStart}
+    />
+  );
 
   if (!isSupabaseConfigured) {
     return (
@@ -195,59 +192,23 @@ function App() {
     );
   }
 
-  if (emailConfirmationPending) {
-    return (
-      <EmailConfirmedPage
-        onContinue={() => {
-          window.history.replaceState(
-            null,
-            "",
-            window.location.pathname
-          );
-          clearEmailConfirmation();
-          setScreen("login");
-        }}
-      />
-    );
-  }
+  // The confirmation page comes before the loading check, as it always has.
+  if (emailConfirmationPending) return authScreens;
 
-  if (loading) {
-    return (
-      <div className="page-shell">
-        <BrandHeader />
-      </div>
-    );
-  }
+  if (loading) return <LoadingShell />;
 
   if (recovering) {
     return (
       <ResetPasswordPage
         onBackToLogin={() => {
           cancelPasswordRecovery();
-          setScreen("login");
+          setAuthStart("login");
         }}
       />
     );
   }
 
-  if (session) return <SignedInApp />;
-
-  if (screen === "welcome") {
-    return (
-      <WelcomePage
-        onGetStarted={() => setScreen("signup")}
-        onSignIn={() => setScreen("login")}
-      />
-    );
-  }
-
-  if (screen === "login") {
-    return (
-      <LoginPage onCreateAccount={() => setScreen("signup")} />
-    );
-  }
-
-  return <SignupPage onLogin={() => setScreen("login")} />;
+  return session ? <SignedInApp /> : authScreens;
 }
 
 export default App;
