@@ -1,25 +1,19 @@
 import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
-import { HALAL_FRIENDLY_NOTE } from "@csc-3100-ama/shared";
+import {
+  DIETARY_OPTIONS,
+  EMPTY_PREFERENCES,
+  HALAL_FRIENDLY_NOTE,
+  NUTRITION_PRIORITIES as PRIORITIES,
+  displayName,
+  errorMessage,
+  validateProfileMoney,
+} from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { AvoidancePicker } from "../../components/AvoidancePicker";
 import { BrandHeader } from "../../components/BrandHeader";
-import { errorMessage } from "../../lib/errors";
 import { fetchPreferences, updatePreferences, updateProfile } from "../../lib/api";
 import type { Profile, UserPreferences } from "../../types/dashboard";
-
-const PRIORITIES = ["High protein", "Lower calorie", "Balanced", "Budget-friendly"];
-const DIETARY_OPTIONS = ["Vegetarian", "Vegan", "Halal-friendly", "Gluten-free", "No seafood"];
-const EMPTY_PREFERENCES: UserPreferences = {
-  dietary_restrictions: [],
-  allergens: [],
-  cuisine_preferences: [],
-  preferred_location_ids: [],
-  excluded_foods: [],
-  nutrition_priorities: [],
-  budget_alerts_enabled: true,
-  theme: "light",
-};
 
 export function ProfilePage({
   profile,
@@ -79,16 +73,13 @@ export function ProfilePage({
     event.preventDefault();
     setError("");
     setNotice("");
+    const moneyError = validateProfileMoney(balance, target);
+    if (moneyError) {
+      setError(moneyError);
+      return;
+    }
     const balanceValue = Number(balance);
     const targetValue = Number(target);
-    if (!Number.isFinite(balanceValue) || balanceValue < 0) {
-      setError("Enter a valid non-negative Dining Dollars balance.");
-      return;
-    }
-    if (!Number.isFinite(targetValue) || targetValue < 0) {
-      setError("Enter a valid non-negative daily target.");
-      return;
-    }
 
     setSaving(true);
     try {
@@ -117,13 +108,7 @@ export function ProfilePage({
     }
   }
 
-  const name =
-    profile.display_name ||
-    user?.user_metadata?.display_name ||
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "Student";
+  const name = displayName(profile, user);
 
   return (
     <div className="page-shell page-shell--dashboard">

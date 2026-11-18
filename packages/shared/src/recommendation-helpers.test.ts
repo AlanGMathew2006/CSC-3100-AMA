@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
-import { macroMatch, type MenuItem, type Recommendation } from "@csc-3100-ama/shared";
+import { describe, it } from "node:test";
+import { macroMatch } from "./macro-match.js";
+import type { MenuItem, Recommendation } from "./index.js";
 import {
   combinedAllergens,
   recommendationAsMenuItem,
   recommendationLabel,
   recommendationParts,
   recommendationLog,
-} from "./recommendations";
+} from "./recommendation-helpers.js";
 
 // Mock data only.
 const meal = (id: string): MenuItem => ({

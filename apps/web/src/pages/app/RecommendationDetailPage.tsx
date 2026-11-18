@@ -1,12 +1,19 @@
-import type { MenuItem, Recommendation, RecommendationItem } from "@csc-3100-ama/shared";
+import {
+  type MenuItem,
+  type Recommendation,
+  type RecommendationItem,
+  allergenLabel,
+  combinedAllergens,
+  quantityLabel,
+  recommendationLabel,
+  recommendationLog,
+  servingLabel,
+} from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
-import { allergenLabel } from "../../lib/allergens";
-import { combinedAllergens, quantityLabel, recommendationLabel, recommendationLog } from "../../lib/recommendations";
-import { servingLabel } from "../../lib/serving";
 
 const money = (amount: number) => `$${amount.toFixed(2)}`;
 

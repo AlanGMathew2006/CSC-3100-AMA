@@ -1,4 +1,4 @@
-import { DAY_KEYS, type ItemAvailability, type ServingWindows } from "@csc-3100-ama/shared";
+import { DAY_KEYS, type ItemAvailability, type ServingWindows } from "./hours.js";
 
 // "10:30" -> "10:30 am", "11:00" -> "11 am", "00:00" -> "12 am".
 export function clockLabel(time: string): string {

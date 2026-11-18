@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
-import { clockLabel, servingLabel, servingStatusText, servingWindowSummary } from "./serving";
+import { describe, it } from "node:test";
+import { clockLabel, servingLabel, servingStatusText, servingWindowSummary } from "./serving.js";
 
 const DAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const every = (open: string, close: string) =>

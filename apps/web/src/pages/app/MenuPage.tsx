@@ -1,13 +1,23 @@
 import { useMemo, useState } from "react";
-import { keepOpenOfferings, macroMatch, type MenuCombo, type MenuItem, type OpenStatus } from "@csc-3100-ama/shared";
+import {
+  keepOpenOfferings,
+  macroMatch,
+  mealPrice,
+  type MenuCombo,
+  type MenuItem,
+  type OpenStatus,
+  logLocations,
+  mealLogFromItem,
+  unpricedLogNote,
+  servingLabel,
+  servingStatusText,
+} from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { MealCard, mealPrice, OpenBadge } from "../../components/MealCard";
+import { MealCard, OpenBadge } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMealTargets } from "../../hooks/useRecommendations";
-import { logLocations, mealLogFromItem, unpricedLogNote } from "../../lib/mealLog";
-import { servingLabel, servingStatusText } from "../../lib/serving";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 
 const FILTERS = ["Location", "Price", "Protein", "Calories", "Dietary"] as const;

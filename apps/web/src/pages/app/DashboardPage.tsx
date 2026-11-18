@@ -1,36 +1,36 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MenuItem, Recommendation } from "@csc-3100-ama/shared";
+import {
+  type MenuItem,
+  type Recommendation,
+  type NutrientKey,
+  NO_RECOMMENDATION_ACTIONS,
+  NO_RECOMMENDATION_MESSAGES,
+  diningDollarsView,
+  displayName as userDisplayName,
+  errorMessage,
+  greeting,
+  macroScoreText,
+  maxDailyCalories,
+  money,
+  nutritionHeading,
+  nutritionView,
+  recommendationEntries,
+  recommendationLog,
+  weeklyBarPercent,
+  weeklyDays,
+} from "@csc-3100-ama/shared";
 import { useAuth } from "../../auth";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
-import { MacroMatchSummary, macroScoreText } from "../../components/MacroMatch";
+import { MacroMatchSummary } from "../../components/MacroMatch";
 import { MealCard } from "../../components/MealCard";
 import { useDashboard } from "../../hooks/useDashboard";
 import { useMenu } from "../../hooks/useMenu";
 import { useRecommendations } from "../../hooks/useRecommendations";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchPreferences } from "../../lib/api";
-import { errorMessage } from "../../lib/errors";
-import {
-  NO_RECOMMENDATION_ACTIONS,
-  NO_RECOMMENDATION_MESSAGES,
-  recommendationAsMenuItem,
-  recommendationLog,
-  recommendationParts,
-} from "../../lib/recommendations";
 import type { UserPreferences } from "../../types/dashboard";
 import { NutritionSheet } from "./NutritionSheet";
-
-type NutrientKey = "protein_g" | "carbs_g" | "fat_g" | "fiber_g";
-
-const money = (amount: number) => `$${amount.toFixed(2)}`;
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
 
 export function DashboardPage({
   onNavigate,
@@ -72,84 +72,24 @@ export function DashboardPage({
     };
   }, []);
 
-  const days = view === "daily" ? 1 : 7;
-  const totals = data ? (view === "daily" ? data.today : data.week) : null;
-  const goalFor = (value: number | null | undefined) =>
-    value == null ? null : value * days;
-  const caloriesGoal = goalFor(data?.goals?.calories);
-  const caloriesEaten = Math.round(totals?.calories ?? 0);
-  const caloriesRemaining =
-    caloriesGoal == null ? null : Math.max(caloriesGoal - caloriesEaten, 0);
-  const macros = [
-    { key: "protein_g" as const, label: "Protein", eaten: totals?.protein_g, goal: goalFor(data?.goals?.protein_g), color: "protein" },
-    { key: "carbs_g" as const, label: "Carbs", eaten: totals?.carbs_g, goal: goalFor(data?.goals?.carbs_g), color: "carbs" },
-    { key: "fat_g" as const, label: "Fat", eaten: totals?.fat_g, goal: goalFor(data?.goals?.fat_g), color: "fat" },
-    { key: "fiber_g" as const, label: "Fiber", eaten: totals?.fiber_g, goal: goalFor(data?.goals?.fiber_g), color: "fiber" },
-  ];
-  const balance = data?.profile?.dining_dollars_balance ?? 0;
-  const dailyTarget = data?.profile?.daily_spending_target ?? null;
-  const spentToday = data?.today.spent ?? 0;
-  const spentWeek = data?.week.spent ?? 0;
-  const weeklyBudget = dailyTarget == null ? null : dailyTarget * 7;
-  const budgetPercent =
-    dailyTarget && dailyTarget > 0
-      ? Math.min((spentToday / dailyTarget) * 100, 100)
-      : 0;
-  const metadata = user?.user_metadata ?? {};
-  const displayName =
-    data?.profile?.display_name ||
-    metadata.display_name ||
-    metadata.full_name ||
-    metadata.name ||
-    user?.email?.split("@")[0] ||
-    "Student";
+  const nutrition = nutritionView(data, view);
+  const { caloriesGoal, macros } = nutrition;
+  const dollars = diningDollarsView(data, preferences);
+  const displayName = userDisplayName(data?.profile, user);
 
   // Ranked by the optimizer (GET /api/recommendations); each is shown through the existing MealCard.
   // `item` is the whole recommendation for display. A single-item recommendation opens and saves
   // that meal; a multi-item one opens the recommendation view and has no bookmark. They show even
   // if the menu hasn't loaded; then `meal` is missing and the card opens the recommendation view.
   const recommendations = useMemo(
-    () =>
-      (recs.data?.recommendations ?? []).flatMap((rec) => {
-        const items = menu.menu?.items ?? [];
-        const item = recommendationAsMenuItem(rec, items);
-        const meal = item ? items.find((candidate) => candidate.id === item.id) : undefined;
-        const single = !rec.combo && rec.items.length === 1;
-        // The card title is shortened to 2 items; list them all when some are hidden.
-        const parts = recommendationParts(rec);
-        const includes = parts.length > 2 ? `Includes: ${parts.join(" + ")}` : null;
-        return item ? [{ rec, item, meal, single: single && Boolean(meal), includes }] : [];
-      }),
+    () => recommendationEntries(recs.data?.recommendations ?? [], menu.menu?.items ?? []),
     [recs.data, menu.menu],
   );
   const emptyReason = recs.loading ? null : recs.data?.reason ?? null;
   const openRecommendation = ({ rec, meal, single }: (typeof recommendations)[number]) =>
     single && meal ? onSelectMeal(meal) : onSelectRecommendation(rec);
-  const weeklyDays = useMemo(() => {
-    const today = new Date();
-    const mondayOffset = (today.getDay() + 6) % 7;
-    const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - mondayOffset);
-    const labels = ["M", "T", "W", "T", "F", "S", "S"];
-    return labels.map((label, index) => {
-      const day = new Date(monday);
-      day.setDate(monday.getDate() + index);
-      const calories = (data?.week_logs ?? [])
-        .filter((log) => {
-          if (!log.eaten_at) return false;
-          const eaten = new Date(log.eaten_at);
-          return eaten.getFullYear() === day.getFullYear() &&
-            eaten.getMonth() === day.getMonth() &&
-            eaten.getDate() === day.getDate();
-        })
-        .reduce((sum, log) => sum + (log.calories ?? 0), 0);
-      return { label, calories };
-    });
-  }, [data?.week_logs]);
-  const maxDailyCalories = Math.max(
-    caloriesGoal == null ? 1 : caloriesGoal / days,
-    ...weeklyDays.map((day) => day.calories),
-    1,
-  );
+  const weekDays = useMemo(() => weeklyDays(data?.week_logs, new Date()), [data?.week_logs]);
+  const maxDaily = maxDailyCalories(weekDays, caloriesGoal, view === "daily" ? 1 : 7);
 
   async function handleAddMeal({ rec }: { rec: Recommendation }) {
     if (await addMeal(recommendationLog(rec))) {
@@ -179,7 +119,7 @@ export function DashboardPage({
               alt=""
             />
             <div className="profile-copy">
-              <span className="profile-greeting">{greeting()},</span>
+              <span className="profile-greeting">{greeting(new Date().getHours())},</span>
               <strong>{displayName}</strong>
             </div>
           </div>
@@ -222,25 +162,15 @@ export function DashboardPage({
         </div>
 
         <h2 className="section-header">
-          {view === "daily" ? "Today's Nutrition" : "This Week's Nutrition"}
+          {nutritionHeading(view)}
         </h2>
 
         <section className={`nutrition-card${view === "weekly" ? " nutrition-card--weekly" : ""}`}>
           <div className="nutrition-chart" aria-label="Nutrition summary">
             <div className="chart-center">
-              <strong>
-                {view === "weekly" && caloriesGoal != null
-                  ? Math.round(caloriesEaten / 7).toLocaleString()
-                  : (caloriesRemaining ?? caloriesEaten).toLocaleString()}
-              </strong>
-              <span>
-                {view === "weekly" ? "Weekly average" : caloriesRemaining == null ? "Calories Logged" : "Calories Remaining"}
-              </span>
-              <small>
-                {caloriesGoal == null
-                  ? "No calorie goal set"
-                  : `${caloriesEaten.toLocaleString()} / ${caloriesGoal.toLocaleString()} kcal`}
-              </small>
+              <strong>{nutrition.centerValue}</strong>
+              <span>{nutrition.centerLabel}</span>
+              <small>{nutrition.centerDetail}</small>
             </div>
           </div>
           <div className="legend-list">
@@ -253,10 +183,10 @@ export function DashboardPage({
           </div>
           {view === "weekly" && (
             <div className="weekly-chart" aria-label="Calories logged each day this week">
-              {weeklyDays.map((day, index) => (
+              {weekDays.map((day, index) => (
                 <div className="weekly-bar-column" key={`${day.label}-${index}`}>
                   <span className="weekly-bar-track">
-                    <i style={{ height: `${Math.max((day.calories / maxDailyCalories) * 100, day.calories ? 8 : 0)}%` }} />
+                    <i style={{ height: `${weeklyBarPercent(day.calories, maxDaily)}%` }} />
                   </span>
                   <small>{day.label}</small>
                 </div>
@@ -278,13 +208,9 @@ export function DashboardPage({
                 <span className={`legend-dot legend-dot--${macro.color}`} />
                 {macro.label}
               </span>
-              <strong className="summary-value">
-                {macro.goal == null
-                  ? `${Math.round(macro.eaten ?? 0)}g · no goal`
-                  : `${Math.round(macro.eaten ?? 0)} / ${macro.goal}g`}
-              </strong>
+              <strong className="summary-value">{macro.text}</strong>
               <span className="summary-progress">
-                <i style={{ width: `${macro.goal ? Math.min(((macro.eaten ?? 0) / macro.goal) * 100, 100) : 0}%` }} />
+                <i style={{ width: `${macro.percent}%` }} />
               </span>
             </button>
           ))}
@@ -293,33 +219,21 @@ export function DashboardPage({
         <section className="dollars-card">
           <span className="dollars-eyebrow">Dining Dollars</span>
           <div className="dollars-header">
-            <strong className="dollar-value">{money(balance)}</strong>
+            <strong className="dollar-value">{money(dollars.balance)}</strong>
             <span className="remaining-label">remaining</span>
           </div>
           <div className="dollars-meta">
-            <span>{dailyTarget == null ? money(spentToday) : `${money(spentToday)} of ${money(dailyTarget)} target spent today`}</span>
-            {preferences?.budget_alerts_enabled && dailyTarget != null && (
-              <span className="tag">
-                {spentToday > dailyTarget
-                  ? "Over target"
-                  : spentToday >= dailyTarget * 0.8
-                    ? "Near target"
-                    : "On track"}
-              </span>
-            )}
+            <span>{dollars.spentText}</span>
+            {dollars.tag && <span className="tag">{dollars.tag}</span>}
           </div>
           <div className="progress-track">
-            <span className="progress-bar" style={{ width: `${budgetPercent}%` }} />
+            <span className="progress-bar" style={{ width: `${dollars.budgetPercent}%` }} />
           </div>
-          <p className="budget-copy">Spent this week: {money(spentWeek)}</p>
-          {weeklyBudget != null && (
+          <p className="budget-copy">{dollars.weekSpentText}</p>
+          {dollars.weeklyBudgetText && (
             <>
-              <p className="budget-copy">Recommended weekly budget: {money(weeklyBudget)}</p>
-              <p className="budget-copy budget-copy--bold">
-                {spentWeek <= weeklyBudget
-                  ? `You're ${money(weeklyBudget - spentWeek)} under your weekly budget.`
-                  : `You're ${money(spentWeek - weeklyBudget)} over your weekly budget.`}
-              </p>
+              <p className="budget-copy">{dollars.weeklyBudgetText}</p>
+              <p className="budget-copy budget-copy--bold">{dollars.weeklyStatusText}</p>
             </>
           )}
         </section>

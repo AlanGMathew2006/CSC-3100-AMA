@@ -1,25 +1,15 @@
-import type { MenuItem, OpenStatus } from "@csc-3100-ama/shared";
-import { formatAmount } from "../lib/format";
-import { listedLocation } from "../lib/locations";
-import { priceText } from "../lib/mealLog";
-import { servingLabel, servingStatusText } from "../lib/serving";
-import { macroScoreText } from "./MacroMatch";
-
-export const cheapestOffering = (item: MenuItem) =>
-  item.offerings.reduce<(typeof item.offerings)[number] | null>(
-    (cheapest, offering) =>
-      cheapest == null || offering.price < cheapest.price ? offering : cheapest,
-    null,
-  );
-
-export const mealPrice = (item: MenuItem): number | null =>
-  cheapestOffering(item)?.price ?? null;
-
-const OPEN_LABELS: Record<OpenStatus, string> = {
-  open: "Open",
-  closed: "Closed",
-  unknown: "Hours unavailable",
-};
+import {
+  OPEN_LABELS,
+  type MenuItem,
+  type OpenStatus,
+  formatAmount,
+  listedLocation,
+  macroScoreText,
+  mealPrice,
+  priceText,
+  servingLabel,
+  servingStatusText,
+} from "@csc-3100-ama/shared";
 
 export function OpenBadge({ status }: { status: OpenStatus }) {
   return <span className={`open-badge open-badge--${status}`}>{OPEN_LABELS[status]}</span>;

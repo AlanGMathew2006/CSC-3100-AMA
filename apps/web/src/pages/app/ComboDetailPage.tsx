@@ -8,15 +8,17 @@ import {
   type MenuCombo,
   type MenuItem,
   type SlotPicks,
+  formatAmount,
+  comboLog,
+  type ComboPick,
+  servingLabel,
+  servingStatusText,
 } from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { OpenBadge } from "../../components/MealCard";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
-import { formatAmount } from "../../lib/format";
-import { comboLog, type ComboPick } from "../../lib/mealLog";
-import { servingLabel, servingStatusText } from "../../lib/serving";
 
 const money = (amount: number) => `$${amount.toFixed(2)}`;
 const SLOT_LABELS: Record<ComboSlot, string> = { side: "Side", drink: "Drink" };

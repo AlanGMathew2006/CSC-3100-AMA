@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "vitest";
-import type { MenuCombo, MenuItem, MenuOffering } from "@csc-3100-ama/shared";
+import { describe, it } from "node:test";
+import type { MenuCombo, MenuItem, MenuOffering } from "./index.js";
 import {
   comboLog,
   comboLogName,
@@ -10,7 +10,7 @@ import {
   priceText,
   submitMealLog,
   unpricedLogNote,
-} from "./mealLog";
+} from "./mealLog.js";
 
 // Mock data only.
 const offering = (id: string, price: number, availability: MenuOffering["availability"] = "available"): MenuOffering => ({

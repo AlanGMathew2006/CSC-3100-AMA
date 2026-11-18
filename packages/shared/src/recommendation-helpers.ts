@@ -1,10 +1,7 @@
-import {
-  ALLERGENS,
-  type MenuItem,
-  type Recommendation,
-  type RecommendationsReason,
-} from "@csc-3100-ama/shared";
-import type { MealLogInput } from "../types/dashboard";
+import { ALLERGENS } from "./dietary.js";
+import type { MealLogInput } from "./dashboard-types.js";
+import type { MenuItem } from "./index.js";
+import type { Recommendation, RecommendationsReason } from "./recommendations.js";
 
 // "2× Broccoli Beef", "½ Fried Rice" (half of a half-and-half base), "Chow Mein".
 export const quantityLabel = (quantity: number, name: string) =>

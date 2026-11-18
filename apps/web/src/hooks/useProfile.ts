@@ -1,6 +1,8 @@
+import {
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { useCallback, useEffect, useState } from "react";
 import { fetchProfile } from "../lib/api";
-import { errorMessage } from "../lib/errors";
 import type { Profile } from "../types/dashboard";
 
 export function useProfile() {

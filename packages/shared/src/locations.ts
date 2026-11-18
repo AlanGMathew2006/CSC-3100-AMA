@@ -1,4 +1,5 @@
-import type { ItemAvailability, MenuItem, OpenStatus } from "@csc-3100-ama/shared";
+import type { ItemAvailability, OpenStatus } from "./hours.js";
+import type { MenuItem } from "./index.js";
 
 export interface ListedLocation {
   label: string; // campus area, location name, or the restaurant as a last resort

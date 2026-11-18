@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import type { MealTargetsResponse, RecommendationsResponse } from "@csc-3100-ama/shared";
+import {
+  type MealTargetsResponse,
+  type RecommendationsResponse,
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { fetchMealTargets, fetchRecommendations, type RecommendationParams } from "../lib/api";
-import { errorMessage } from "../lib/errors";
 
 function useRequest<T>(load: () => Promise<T>) {
   const [data, setData] = useState<T | null>(null);

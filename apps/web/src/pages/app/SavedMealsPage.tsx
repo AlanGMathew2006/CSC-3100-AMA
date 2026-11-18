@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import type { MenuItem } from "@csc-3100-ama/shared";
+import {
+  type MenuItem,
+  errorMessage,
+} from "@csc-3100-ama/shared";
 import { BottomNav, type AppTab } from "../../components/BottomNav";
 import { BrandHeader } from "../../components/BrandHeader";
 import { MealCard } from "../../components/MealCard";
 import { useMenu } from "../../hooks/useMenu";
 import { useSavedMeals } from "../../hooks/useSavedMeals";
 import { fetchMealLogs } from "../../lib/api";
-import { errorMessage } from "../../lib/errors";
 import type { MealLogInput } from "../../types/dashboard";
 
 export function SavedMealsPage({
