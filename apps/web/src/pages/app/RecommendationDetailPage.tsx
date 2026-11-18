@@ -1,9 +1,11 @@
 import {
   type MenuItem,
   type Recommendation,
-  type RecommendationItem,
   allergenLabel,
   combinedAllergens,
+  lineNutrition,
+  linePrice,
+  money,
   quantityLabel,
   recommendationLabel,
   recommendationLog,
@@ -14,25 +16,6 @@ import { BrandHeader } from "../../components/BrandHeader";
 import { MacroMatchSummary } from "../../components/MacroMatch";
 import { useLogMeal } from "../../hooks/useLogMeal";
 import { useMenu } from "../../hooks/useMenu";
-
-const money = (amount: number) => `$${amount.toFixed(2)}`;
-
-// "450 cal · 30g protein · 40g carbs · 18g fat" for the item's quantity; unknown values say so.
-function lineNutrition(meal: MenuItem | undefined, quantity: number): string {
-  const amount = (value: number | null | undefined, unit: string, label: string) =>
-    value == null ? `${label} unavailable` : `${Math.round(value * quantity)}${unit} ${label}`;
-  return [
-    amount(meal?.calories, "", "cal"),
-    amount(meal?.protein_g, "g", "protein"),
-    amount(meal?.carbs_g, "g", "carbs"),
-    amount(meal?.fat_g, "g", "fat"),
-  ].join(" · ");
-}
-
-function linePrice(item: RecommendationItem): string {
-  if (item.unit_price == null) return "in combo";
-  return item.quantity > 1 ? `${money(item.unit_price)} each` : money(item.unit_price);
-}
 
 // A whole recommended meal (several items, maybe a combo). Tapping an item opens its own details.
 export function RecommendationDetailPage({

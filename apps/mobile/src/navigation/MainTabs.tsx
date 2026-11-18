@@ -8,6 +8,7 @@ import { ToastProvider } from "../components/Toast";
 import { ComingSoonScreen } from "../screens/ComingSoonScreen";
 import { DashboardScreen } from "../screens/DashboardScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
+import { RecommendationDetailScreen } from "../screens/RecommendationDetailScreen";
 import { useTheme } from "../theme";
 
 export type HomeStackParams = {
@@ -55,11 +56,19 @@ function DashboardRoute({ navigation }: NativeStackScreenProps<HomeStackParams, 
   );
 }
 
+function RecommendationRoute({
+  navigation,
+  route,
+}: NativeStackScreenProps<HomeStackParams, "RecommendationDetail">) {
+  return <RecommendationDetailScreen rec={route.params.rec} onBack={() => navigation.goBack()} />;
+}
+
 function HomeStack() {
   const { palette } = useTheme();
   return (
     <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: palette.pageBg } }}>
       <Stack.Screen name="Dashboard" component={DashboardRoute} />
+      <Stack.Screen name="RecommendationDetail" component={RecommendationRoute} />
     </Stack.Navigator>
   );
 }

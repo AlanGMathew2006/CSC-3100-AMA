@@ -4,6 +4,8 @@ import { macroMatch } from "./macro-match.js";
 import type { MenuItem, Recommendation } from "./index.js";
 import {
   combinedAllergens,
+  lineNutrition,
+  linePrice,
   recommendationAsMenuItem,
   recommendationLabel,
   recommendationParts,
@@ -140,5 +142,25 @@ describe("combinedAllergens", () => {
   it("is incomplete when any item is unverified or missing", () => {
     assert.equal(combinedAllergens(rec(), [withAllergens("rice", ["egg"]), withAllergens("beef", [], false)]).complete, false);
     assert.equal(combinedAllergens(rec(), [withAllergens("rice", ["egg"])]).complete, false);
+  });
+});
+
+describe("lineNutrition and linePrice", () => {
+  const meal = { calories: 305, protein_g: 7.5, carbs_g: null, fat_g: 6.5 } as MenuItem;
+
+  it("scales macros by quantity and says unavailable for unknown values", () => {
+    assert.equal(lineNutrition(meal, 1), "305 cal · 8g protein · carbs unavailable · 7g fat");
+    assert.equal(lineNutrition(meal, 0.5), "153 cal · 4g protein · carbs unavailable · 3g fat");
+    assert.equal(
+      lineNutrition(undefined, 1),
+      "cal unavailable · protein unavailable · carbs unavailable · fat unavailable",
+    );
+  });
+
+  it("shows in combo, the price, or the price each", () => {
+    const item = { meal_id: "m", name: "M", quantity: 1, unit_price: null, combo_part: null, meal_role: "main" } as const;
+    assert.equal(linePrice(item), "in combo");
+    assert.equal(linePrice({ ...item, unit_price: 8.49 }), "$8.49");
+    assert.equal(linePrice({ ...item, unit_price: 8.49, quantity: 2 }), "$8.49 each");
   });
 });
