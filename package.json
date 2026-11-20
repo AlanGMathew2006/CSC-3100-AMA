@@ -11,6 +11,7 @@
     "dev": "concurrently -k -n web,api \"npm run dev --workspace=apps/web\" \"npm run dev --workspace=packages/express-backend\"",
     "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/web",
     "test": "npm run test --workspace=apps/web --workspace=packages/shared --workspace=packages/express-backend --if-present",
+    "test:system": "npm run test:system --workspace=packages/express-backend",
     "lint": "npm run lint --workspace=apps/web --workspace=packages/shared --workspace=packages/express-backend --if-present",
     "apply:fill-in": "npm run apply:fill-in --workspace=packages/express-backend --",
     "mobile": "npm run start --workspace=apps/mobile",

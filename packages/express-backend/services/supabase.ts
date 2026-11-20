@@ -6,18 +6,17 @@ const publishableKey =
   process.env.SUPABASE_PUBLISHABLE_KEY ??
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-if (!url || !publishableKey) {
-  throw new Error(
-    "Missing SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY. Copy .env.example to .env.",
-  );
-}
-
 const clientOptions = {
   auth: { persistSession: false, autoRefreshToken: false },
 };
 
 // Client acting as the signed-in user, so Row Level Security applies.
 export function createUserClient(accessToken: string): SupabaseClient {
+  if (!url || !publishableKey) {
+    throw new Error(
+      "Missing SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY. Copy .env.example to .env.",
+    );
+  }
   return createClient(url as string, publishableKey as string, {
     ...clientOptions,
     global: { headers: { Authorization: `Bearer ${accessToken}` } },

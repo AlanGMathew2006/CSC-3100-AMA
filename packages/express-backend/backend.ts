@@ -6,6 +6,7 @@ import express, {
   type Response,
 } from "express";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { pathToFileURL } from "node:url";
 import { createUserClient } from "./services/supabase.js";
 import * as menu from "./services/menu-service.js";
 import * as recommendations from "./services/recommendation-service.js";
@@ -16,34 +17,47 @@ interface AuthedRequest extends Request {
   userId: string;
 }
 
-const app = express();
-app.use(
-  cors({
-    origin: (process.env.CORS_ORIGIN ?? "http://localhost:5173")
-      .split(",")
-      .map((origin) => origin.trim()),
-  }),
-);
-app.use(express.json());
+export interface AppDependencies {
+  authenticateToken?: (
+    token: string,
+  ) => Promise<{ db: SupabaseClient; userId: string } | null>;
+}
 
-// Verifies the Supabase access token and attaches a user-scoped client (RLS applies).
-const requireAuth: RequestHandler = async (req, res, next) => {
-  const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
-  if (!token) {
-    res.status(401).json({ error: "Missing access token" });
-    return;
-  }
+export function createApp(dependencies: AppDependencies = {}) {
+  const app = express();
+  app.use(
+    cors({
+      origin: (process.env.CORS_ORIGIN ?? "http://localhost:5173")
+        .split(",")
+        .map((origin) => origin.trim()),
+    }),
+  );
+  app.use(express.json());
 
-  const db = createUserClient(token);
-  const { data, error } = await db.auth.getUser(token);
-  if (error || !data.user) {
-    res.status(401).json({ error: "Invalid or expired access token" });
-    return;
-  }
-  (req as AuthedRequest).db = db;
-  (req as AuthedRequest).userId = data.user.id;
-  next();
-};
+  // Verifies the Supabase access token and attaches a user-scoped client (RLS applies).
+  const requireAuth: RequestHandler = async (req, res, next) => {
+    const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+    if (!token) {
+      res.status(401).json({ error: "Missing access token" });
+      return;
+    }
+
+    const authenticated =
+      dependencies.authenticateToken
+        ? await dependencies.authenticateToken(token)
+        : await (async () => {
+            const db = createUserClient(token);
+            const { data, error } = await db.auth.getUser(token);
+            return error || !data.user ? null : { db, userId: data.user.id };
+          })();
+    if (!authenticated) {
+      res.status(401).json({ error: "Invalid or expired access token" });
+      return;
+    }
+    (req as AuthedRequest).db = authenticated.db;
+    (req as AuthedRequest).userId = authenticated.userId;
+    next();
+  };
 
 const handle =
   (fn: (req: AuthedRequest, res: Response) => Promise<unknown> | unknown): RequestHandler =>
@@ -340,6 +354,13 @@ app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   const message = err instanceof Error ? err.message : (err as { message?: string })?.message;
   res.status(400).json({ error: message ?? "Request failed" });
 });
+  return app;
+}
 
-const port = Number(process.env.PORT ?? 8000);
-app.listen(port, () => console.log(`Backend listening on port ${port}`));
+const entryPoint = process.argv[1]
+  ? pathToFileURL(process.argv[1]).href
+  : undefined;
+if (entryPoint === import.meta.url) {
+  const port = Number(process.env.PORT ?? 8000);
+  createApp().listen(port, () => console.log(`Backend listening on port ${port}`));
+}

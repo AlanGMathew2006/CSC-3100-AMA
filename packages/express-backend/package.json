@@ -14,7 +14,8 @@
     "import:menu": "tsx --env-file=.env scripts/import-menu.ts",
     "apply:fill-in": "tsx scripts/apply-fill-in.ts",
     "pretest": "npm run build --prefix ../shared",
-    "test": "tsx --test scripts/**/*.test.ts services/**/*.test.ts"
+    "test": "tsx --test scripts/**/*.test.ts services/**/*.test.ts",
+    "test:system": "tsx --test services/system.test.ts"
   },
   "dependencies": {
     "@csc-3100-ama/shared": "0.0.0",
