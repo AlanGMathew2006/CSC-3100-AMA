@@ -19,14 +19,18 @@ export interface ValidationIssue<Field extends string = SignupField> {
   message: string;
 }
 
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
 export function isValidEmail(email: string): boolean {
-  return EMAIL_PATTERN.test(email);
+  if (!EMAIL_PATTERN.test(email)) return false;
+
+  const domain = email.slice(email.lastIndexOf("@") + 1);
+  const domainLabels = domain.split(".");
+  return domainLabels.length >= 2 && domainLabels.every((label) => label.length > 0);
 }
 
 // Returns the first problem found, or null when the input is valid.

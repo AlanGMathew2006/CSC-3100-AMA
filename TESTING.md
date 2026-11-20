@@ -59,3 +59,32 @@ The current system tests use mocked data-access responses; they verify
 integration between Express and backend logic but do not exercise a live
 Supabase database or RLS policies. The tests do not start the real backend
 listener; they start a temporary HTTP server on an available local port.
+
+## TDD example: malformed email domains
+
+### Requirement
+
+Shared signup and login validation must reject email addresses with malformed
+dotted domains, such as `student@calpoly..edu`, while preserving existing
+valid-email behavior.
+
+### Red
+
+A shared assertion was added to `validateSignup` for
+`student@calpoly..edu`, plus a mobile login assertion for the same address.
+Running `npm run test --workspace=packages/shared` confirmed the shared test
+failed because validation previously returned `null`.
+
+### Green
+
+The shared `isValidEmail` function was tightened so each dot-separated domain
+label must be non-empty. This made the new shared assertion pass and also
+applied the rule to mobile login through the shared package.
+
+### Refactor
+
+The initial domain pattern was replaced with an explicit check that:
+
+- requires the basic email structure,
+- splits the domain into labels, and
+- requires at least two labels and no empty labels.

@@ -56,38 +56,9 @@ The web app runs on `http://localhost:5173` and the API on
 `npm run dev --workspace=packages/express-backend`.
 
 Other scripts: `npm run build`, `npm run lint`, `npm run test`.
+For test setup and system-test coverage, see [TESTING.md](./TESTING.md).
 
 Never commit `.env` files or the Supabase service-role key.
-
-## Automated system tests
-
-The system tests verify HTTP routes together with backend service logic and
-mocked data-access behavior. They use Node's built-in test runner and the
-Node fetch API; no real Supabase project or external test database is needed.
-
-From the repository root:
-
-```powershell
-npm install
-npm run test:system
-```
-
-To run the complete project test suite:
-
-```powershell
-npm test
-```
-
-System test coverage is in
-[`packages/express-backend/services/system.test.ts`](./packages/express-backend/services/system.test.ts).
-It currently covers:
-
-- `GET /api/menu` through the Express route, menu service, and data-access
-  mock.
-- `POST /api/meal-logs` through authentication injection, request validation,
-  the user service, and the insert data-access mock.
-
-See [TESTING.md](./TESTING.md) for setup and test details.
 
 ## Run the full app with Docker
 

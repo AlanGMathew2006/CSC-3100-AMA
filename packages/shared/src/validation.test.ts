@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { MIN_PASSWORD_LENGTH, validateNewPassword, validateSignup } from "./validation.js";
+import {
+  isValidEmail,
+  MIN_PASSWORD_LENGTH,
+  validateNewPassword,
+  validateSignup,
+} from "./validation.js";
 
 const good = "a".repeat(MIN_PASSWORD_LENGTH);
 const short = "a".repeat(MIN_PASSWORD_LENGTH - 1);
@@ -34,6 +39,11 @@ describe("validateSignup", () => {
 
   it("accepts valid input", () => {
     assert.equal(validateSignup(valid), null);
+  });
+
+  it("rejects malformed dotted domains", () => {
+    assert.equal(isValidEmail("student@calpoly..edu"), false);
+    assert.equal(validateSignup({ ...valid, email: "student@calpoly..edu" })?.field, "email");
   });
 
   it("checks name and email before the password", () => {

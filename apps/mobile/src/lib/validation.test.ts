@@ -30,6 +30,10 @@ describe("validateLogin", () => {
     expect(validateLogin(" Sam@Example.com ", "x")).toBeNull();
   });
 
+  it("rejects malformed dotted domains", () => {
+    expect(validateLogin("student@calpoly..edu", "x")?.field).toBe("email");
+  });
+
   it("flags a bad email first", () => {
     expect(validateLogin("nope", "")?.field).toBe("email");
   });
